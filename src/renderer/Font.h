@@ -136,8 +136,6 @@ class CFont
 	static int16 Size[LANGSET_MAX][MAX_FONTS][210];
 	static uint8 LanguageSet;
 	static int32 Slot;
-	static int32 chs_Slot;
-	
 #else
 	static int16 Size[MAX_FONTS][210];
 #endif

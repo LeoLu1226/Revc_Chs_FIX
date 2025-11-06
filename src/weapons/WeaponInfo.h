@@ -66,6 +66,7 @@ public:
 	static CWeaponInfo *GetWeaponInfo(eWeaponType weaponType);
 	static eWeaponFire FindWeaponFireType(char *name);
 	static eWeaponType FindWeaponType(char *name);
+	static char* FindWeaponName(eWeaponType weaponType);
 	static void Shutdown(void);
 	static bool IsWeaponSlotAmmoMergeable(uint32 slot) { return slot == WEAPONSLOT_SHOTGUN || slot == WEAPONSLOT_SUBMACHINEGUN || slot == WEAPONSLOT_RIFLE; }
 	bool IsFlagSet(uint32 flag) const { return (m_Flags & flag) != 0; }

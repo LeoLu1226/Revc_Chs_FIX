@@ -1,4 +1,4 @@
-﻿#include "common.h"
+#include "common.h"
 
 #include "Font.h"
 #include "Sprite2d.h"
@@ -7,16 +7,6 @@
 #include "FileMgr.h"
 #endif
 #include "Timer.h"
-
-#ifdef VC_BMP
-// 三种字体的配置(强制)大任务包专用
-enum FONT_SET { FT_NONE = 0, FT_normal, FT_slant, FT_regular };
-FONT_SET current_font_set = FT_NONE;
-#endif // VC_BMP
-
-
-
-
 
 void
 AsciiToUnicode(const char *src, wchar *dst)
@@ -64,19 +54,11 @@ UnicodeMakeUpperCase(wchar *dst, const wchar *src) // idk what to do with it, se
 CFontDetails CFont::Details;
 bool16 CFont::NewLine;
 CSprite2d CFont::Sprite[MAX_FONTS];
-#ifdef VC_BMP
-static CSprite2d Sprite_C[3]; // 中文
-#else
-static CSprite2d Sprite_C[2]; // 中文
-#endif // VC_BMP
-
-
 CFontRenderState CFont::RenderState;
 
 #ifdef MORE_LANGUAGES
 uint8 CFont::LanguageSet = FONT_LANGSET_EFIGS;
 int32 CFont::Slot = -1;
-int32 CFont::chs_Slot = -1;
 #define JAP_TERMINATION (0x8000 | '~')
 
 int16 CFont::Size[LANGSET_MAX][MAX_FONTS][210] = {
@@ -280,7 +262,7 @@ int CFont::PS2Symbol = BUTTON_NONE;
 int CFont::ButtonsSlot = -1;
 #endif // BUTTON_ICONS
 
-// 中文支持
+// ����֧��
 #include <cstdio>
 #include <cstdlib>
 struct CharPos {
@@ -297,8 +279,9 @@ GetCharPos(wchar chr)
 	return sTable[chr];
 }
 
-// 读表
-bool ReadTable()
+// ����
+bool
+ReadTable()
 {
 	// if(sTable.size() > 0) { sTable.}
 
@@ -322,27 +305,26 @@ bool ReadTable()
 	}
 }
 
-void CFont::Initialise(void)
+void
+CFont::Initialise(void)
 {
-	int slot,chsslot;
+	int slot;
 
 	slot = CTxdStore::AddTxdSlot("fonts");
-	chsslot = CTxdStore::AddTxdSlot("chsfonts");
 #ifdef MORE_LANGUAGES
 	Slot = slot;
-	chs_Slot = chsslot;
 	switch(LanguageSet) {
 	case FONT_LANGSET_EFIGS:
 	default: CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD"); break;
 	case FONT_LANGSET_POLISH: CTxdStore::LoadTxd(slot, "MODELS/FONTS_P.TXD"); break;
 	case FONT_LANGSET_RUSSIAN: CTxdStore::LoadTxd(slot, "MODELS/FONTS_R.TXD"); break;
 	case FONT_LANGSET_JAPANESE: CTxdStore::LoadTxd(slot, "MODELS/FONTS_J.TXD"); break;
-	case FONT_LANGSET_CHINESE: CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD"); break;
+	case FONT_LANGSET_CHINESE: CTxdStore::LoadTxd(slot, "MODELS/CHINESE.TXD"); break;
 	}
 	if(IsChinese()) {
 		if(!ReadTable()) {
 			LanguageSet = 0;
-			// CCTxdStore::RemoveTxd(slot);
+			CTxdStore::RemoveTxd(slot);
 		}
 	}
 
@@ -352,9 +334,22 @@ void CFont::Initialise(void)
 	CTxdStore::AddRef(slot);
 	CTxdStore::PushCurrentTxd();
 	CTxdStore::SetCurrentTxd(slot);
-	
+
 #ifdef MORE_LANGUAGES
-	
+	if(IsChinese()) {
+		// Sprite[1].SetTexture("slant", "slantm");
+		// Sprite[3].SetTexture("slant", "slantm");
+		// Sprite[1].SetTexture("normal", "normalm");
+		// Sprite[2].SetTexture("slant", "slantm");
+		Sprite[2].SetTexture("normal", "normalm");
+		Sprite[3].SetTexture("slant", "slantm");
+		CTxdStore::PopCurrentTxd();
+
+		CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD");
+		CTxdStore::AddRef(slot);
+		CTxdStore::PushCurrentTxd();
+		CTxdStore::SetCurrentTxd(slot);
+	}
 	Sprite[0].SetTexture("font2", "font2m");
 	Sprite[1].SetTexture("font1", "font1m");
 
@@ -385,22 +380,6 @@ void CFont::Initialise(void)
 	SetAlphaFade(255.0f);
 	SetDropShadowPosition(0);
 	CTxdStore::PopCurrentTxd();
-
-
-	if(IsChinese()) {
-		CTxdStore::LoadTxd(chs_Slot, "MODELS/CHINESE.TXD");
-		CTxdStore::AddRef(chs_Slot);
-		CTxdStore::PushCurrentTxd();
-		CTxdStore::SetCurrentTxd(chs_Slot);
-		Sprite_C[0].SetTexture("normal", "normalm");
-		Sprite_C[1].SetTexture("slant", "slantm");
-#ifdef VC_BMP
-		Sprite_C[2].SetTexture("regular", "regularm");
-#endif // VC_BMP
-
-		
-		CTxdStore::PopCurrentTxd();
-	}
 
 #if !defined(GAMEPAD_MENU) && defined(BUTTON_ICONS)
 	// loaded in CMenuManager with GAMEPAD_MENU defined
@@ -453,7 +432,7 @@ CFont::LoadButtons(const char *txdPath)
 }
 #endif // BUTTON_ICONS
 
-//彩蛋变量1
+//�ʵ�����1
 uint8 clickNUM = 0;
 
 #ifdef MORE_LANGUAGES
@@ -475,49 +454,40 @@ CFont::ReloadFonts(uint8 set)
 		}
 		// CTxdStore::PushCurrentTxd();
 		CTxdStore::RemoveTxd(Slot);
-		CTxdStore::RemoveTxd(chs_Slot);
 		switch(set) {
 		case FONT_LANGSET_EFIGS:
 		default: CTxdStore::LoadTxd(Slot, "MODELS/FONTS.TXD"); break;
 		case FONT_LANGSET_POLISH: CTxdStore::LoadTxd(Slot, "MODELS/FONTS_P.TXD"); break;
 		case FONT_LANGSET_RUSSIAN: CTxdStore::LoadTxd(Slot, "MODELS/FONTS_R.TXD"); break;
 		case FONT_LANGSET_JAPANESE: CTxdStore::LoadTxd(Slot, "MODELS/FONTS_J.TXD"); break;
-		case FONT_LANGSET_CHINESE: CTxdStore::LoadTxd(Slot, "MODELS/FONTS.TXD"); break;
+		case FONT_LANGSET_CHINESE: CTxdStore::LoadTxd(Slot, "MODELS/CHINESE.TXD"); break;
 		}
 		CTxdStore::PushCurrentTxd();
 		CTxdStore::SetCurrentTxd(Slot);
 
+		if(IsChinese()) {
+			Sprite[2].SetTexture("normal", "normalm");
+			Sprite[3].SetTexture("slant", "slantm");
 
-		Sprite[0].SetTexture("font2", "font2m");
-		Sprite[1].SetTexture("font1", "font1m");
-
-			if(!ReadTable()) {
-			LanguageSet = 0;
-		} else {
 			CTxdStore::PopCurrentTxd();
 
-			// Sprite_C[0].Delete();
-			// Sprite_C[1].Delete();
-			CTxdStore::RemoveTxd(chs_Slot);
-			CTxdStore::LoadTxd(chs_Slot, "MODELS/CHINESE.TXD");
+			CTxdStore::LoadTxd(Slot, "MODELS/FONTS.TXD");
 			CTxdStore::PushCurrentTxd();
-			CTxdStore::SetCurrentTxd(chs_Slot);
-			Sprite_C[0].SetTexture("normal", "normalm");
-			Sprite_C[1].SetTexture("slant", "slantm");
-#ifdef VC_BMP
-			Sprite_C[2].SetTexture("regular", "regularm");
-#endif // VC_BMP
-			
-			// CCTxdStore::PopCurrentTxd();
+			CTxdStore::SetCurrentTxd(Slot);
+
+			// Sprite[2].SetTexture("slant", "slantm");
+		} else {
+			clickNUM = 0;
 		}
-		
+		Sprite[0].SetTexture("font2", "font2m");
+		Sprite[1].SetTexture("font1", "font1m");
 
 		if(set == FONT_LANGSET_JAPANESE) { Sprite[2].SetTexture("FONTJAP", "FONTJAP_mask"); }
 
 		CTxdStore::PopCurrentTxd();
 	}
 	LanguageSet = set;
-	//if(clickNUM < 6) { clickNUM++; }
+	if(clickNUM < 6) { clickNUM++; }
 }
 #endif
 
@@ -536,20 +506,11 @@ CFont::Shutdown(void)
 #ifdef MORE_LANGUAGES
 	if(IsJapanese()) Sprite[3].Delete();
 	if(IsChinese()) {
-
-		Sprite_C[0].Delete();
-		Sprite_C[1].Delete();
-#ifdef VC_BMP
-		Sprite_C[2].Delete();
-#endif // VC_BMP
-		
-		// CCTxdStore::SetCurrentTxd(chs_Slot);
-		CTxdStore::RemoveTxdSlot(chs_Slot);
-		chs_Slot = -1;
+		Sprite[2].Delete();
+		Sprite[3].Delete();
 	}
 
 	CTxdStore::RemoveTxdSlot(Slot);
-
 	Slot = -1;
 #else
 	CTxdStore::RemoveTxdSlot(CTxdStore::FindTxdSlot("fonts"));
@@ -605,7 +566,7 @@ CFont::PrintCharDispatcher(float arg_x, float arg_y, wchar arg_char)
 
 	// rr.push_back(arg_char);
 	// CFontRenderState ftt = RenderState;
-	if(arg_char < 0x80) {
+	if(arg_char < 0x87) {
 		wchar s[2] = {arg_char, '\0'};
 		// if((arg_char >= '0' && arg_char <= ':')) arg_char += 128;
 
@@ -619,7 +580,7 @@ CFont::PrintCharDispatcher(float arg_x, float arg_y, wchar arg_char)
 		if(RenderState.bFontHalfTexture) { arg_char = FindNewCharacter(arg_char); }
 
 		
-		PrintChar(arg_x, arg_y, arg_char); // 加128钱数显示文本正常
+		PrintChar(arg_x, arg_y, arg_char); // ��128Ǯ����ʾ�ı�����
 
 	} else {
 		PrintCHSChar(arg_x, arg_y, arg_char);
@@ -649,8 +610,6 @@ CFont::PrintCHSChar(float arg_x, float arg_y, wchar arg_char)
 	// if(arg_x >= rw::UserDataGlobals || arg_x <= 0.0f || arg_y <= 0.0f || arg_y >= SCREEN_HEIGHT) { return; }
 	if(arg_x <= 0.0f || arg_x > SCREEN_WIDTH || arg_y <= 0.0f || arg_y > SCREEN_HEIGHT) // BUG: game uses SCREENW again
 		return;
-
-	int zzzz = RsGlobal.width;
 
 	pos = GetCharPos(arg_char);
 
@@ -991,7 +950,7 @@ CFont::RenderFontBuffer_Chs()
 		// var_char = *pbuffer.ptext;
 		var_char = *pRenderStateBufPointer.pStr;
 
-		if(var_char < 0x80) {
+		if(var_char < 0x87) {
 			// CSprite2d::SetRenderState(&Sprite[RenderState->FontStyle], 0);
 			Sprite[RenderState.style].SetRenderState();
 			// pos.x += 2.0f;
@@ -1004,28 +963,12 @@ CFont::RenderFontBuffer_Chs()
 			*/ 
 			// RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)TRUE);
 		} else {
-#ifdef VC_BMP
-			// 判断是否强制使用字体
-			if(current_font_set != FT_NONE) {
-				switch(current_font_set) {
-				case FT_normal: Sprite_C[0].SetRenderState(); break;
-				case FT_slant: Sprite_C[1].SetRenderState(); break;
-				case FT_regular: Sprite_C[2].SetRenderState(); break;
-				}
-			} else
-#endif // VC_BMP
-
-			
-				if(RenderState.style != 0) {
+			if(RenderState.slant == 0.0f) {
 				// CSprite2d::fpSetRenderState.fun(&ChsSprite, 0);
-				// 暂时注释
-				// Sprite[2].SetRenderState();
-				Sprite_C[0].SetRenderState();
+				Sprite[2].SetRenderState();
 			} else {
 				// CSprite2d::fpSetRenderState.fun(&ChsSlantSprite, 0);
-				// 暂时注释
-				// Sprite[3].SetRenderState();
-				Sprite_C[1].SetRenderState();
+				Sprite[3].SetRenderState();
 			}
 		}
 
@@ -1056,15 +999,55 @@ CFont::RenderFontBuffer_Chs()
 
 	// FontBufferIter->addr = FontBuffer.addr;
 	FontRenderStatePointer.pRenderState = (CFontRenderState *)FontRenderStateBuf;
-#ifdef VC_BMP
-current_font_set = FT_NONE; // 恢复默认
-#endif // VC_BMP
-
-	
 }
 
+#if 0 // def MORE_LANGUAGES
+bool
+CFont::PrintString(float x, float y, wchar *start, wchar *&end, float spwidth, float japX)
+{
+	wchar *s, c, unused;
 
-void CFont::PrintString(float x, float y, uint32 a, wchar *start, wchar *end, float spwidth)
+	if (IsJapanese()) {
+		float jx = 0.0f;
+		for (s = start; s < end; s++) {
+			if (*s == JAP_TERMINATION || *s == '~')
+				s = ParseToken(s, &unused, true);
+			if (NewLine) {
+				NewLine = false;
+				break;
+			}
+			jx += GetCharacterSize(*s - ' ');
+		}
+		s = start;
+		if (Details.centre)
+			x = japX - jx / 2.0f;
+		else if (Details.rightJustify)
+			x = japX - jx;
+	}
+
+	for (s = start; s < end; s++) {
+		if (*s == '~' || (IsJapanese() && *s == JAP_TERMINATION))
+			s = ParseToken(s, &unused);
+		if (NewLine && IsJapanese()) {
+			NewLine = false;
+			end = s;
+			return true;
+		}
+		c = *s - ' ';
+		if (Details.slant != 0.0f && !IsJapanese())
+			y = (Details.slantRefX - x) * Details.slant + Details.slantRefY;
+
+		PrintChar(x, y, c);
+		x += GetCharacterSize(c);
+		if (c == 0 && (!NewLine || !IsJapanese()))	// space
+			x += spwidth;
+	}
+	return false;
+}
+#else
+
+void
+CFont::PrintString(float x, float y, uint32 a, wchar *start, wchar *end, float spwidth)
 {
 	wchar *s;
 
@@ -1126,9 +1109,10 @@ void CFont::PrintString(float x, float y, uint32 a, wchar *start, wchar *end, fl
 	*(FontRenderStatePointer.pStr++) = '\0';
 	FontRenderStatePointer.Align();
 }
+#endif
 
-
-void CFont::PrintStringFromBottom(float x, float y, wchar *str)
+void
+CFont::PrintStringFromBottom(float x, float y, wchar *str)
 {
 	y -= (32.0f * Details.scaleY / 2.0f + 2.0f * Details.scaleY) * GetNumberLines(x, y, str);
 	if(Details.slant != 0.0f) y -= ((Details.slantRefX - x) * Details.slant + Details.slantRefY);
@@ -1139,7 +1123,8 @@ void CFont::PrintStringFromBottom(float x, float y, wchar *str)
 const short CFont::iMaxCharWidth = 28;
 const float CFont::fMaxCharWidth = CFont::iMaxCharWidth;
 
-float CFont::GetCharacterSize_Chs(wchar arg_char, uint16 nFontStyle, bool FontHalfTexture, bool bProp, float fScaleX)
+float
+CFont::GetCharacterSize_Chs(wchar arg_char, uint16 nFontStyle, bool FontHalfTexture, bool bProp, float fScaleX)
 {
 	float charWidth;
 
@@ -1169,17 +1154,20 @@ float CFont::GetCharacterSize_Chs(wchar arg_char, uint16 nFontStyle, bool FontHa
 	return (charWidth * fScaleX);
 }
 
-float CFont::GetCharacterSizeNormal(wchar arg_char)
+float
+CFont::GetCharacterSizeNormal(wchar arg_char)
 {
 	return GetCharacterSize_Chs(arg_char, Details.style, Details.bFontHalfTexture, Details.proportional, Details.scaleX);
 }
 
-float CFont::GetCharacterSizeDrawing(wchar arg_char)
+float
+CFont::GetCharacterSizeDrawing(wchar arg_char)
 {
 	return GetCharacterSize_Chs(arg_char, RenderState.style, RenderState.bFontHalfTexture, RenderState.proportional, RenderState.scaleX);
 }
 
-void CFont::PrintString_Chs(float arg_x, float arg_y, wchar *arg_text)
+void
+CFont::PrintString_Chs(float arg_x, float arg_y, wchar *arg_text)
 {
 	CRect textBoxRect;
 
@@ -1290,31 +1278,31 @@ void CFont::PrintString_Chs(float arg_x, float arg_y, wchar *arg_text)
 }
 #include<Text.h>
 #include <string>
-#include<locale>
-// 将 wchar* 转换为 std::wstring 的工具函数
-static std::wstring
-WcharTOWstring(const wchar *ws)
+void
+CFont::PrintString(float xstart, float ystart, wchar *s)
 {
-	if(!ws) return std::wstring();
-	// wchar 可能是 uint16_t，std::wstring 构造函数需要 wchar_t*
-	// 这里假设 wchar 与 wchar_t 兼容，否则需要逐字符转换
-	return std::wstring(reinterpret_cast<const wchar_t *>(ws));
-}
-void CFont::PrintString(float xstart, float ystart, wchar *s)
-{
-	//std::wstring ws = (wchar_t *)s;
-	//setlocale(LC_ALL, "chs");
-	//wprintf_s(L"PrintString_Chs: %s\n", ws.c_str());
-
+	
 	if(IsChinese()) {
-		
+		//�ʵ�����
+		//2wchar tts[] = {'C', 'H', 'I', 'N', 'E', 'S', 'E', '\0'};
+		std::wstring wa = L"FEL_CHS missing";
+		std::wstring ws=(wchar_t*)s;
+		if(!ws.compare(wa)) 
+		{ 
+			if(clickNUM >= 5) 
+			{
+				s = TheText.Get("ASS1_9");
+				//s = tts;
+			}
+			
+		}
+
 		// int a = sizeof( wchar_t);
-		// wchar_t *ww = L"你";
+		// wchar_t *ww = L"��";
 		// int b = ww[0];
 		//  font.RenderText(s, &tfont, xstart, ystart, 0.8, Details.color);
-		// font.RenderText(NewFont::WstringTOWchar(L"你好aaa"), &tfont, 0, 0, 0.8, Details.color);
+		// font.RenderText(NewFont::WstringTOWchar(L"���aaa"), &tfont, 0, 0, 0.8, Details.color);
 		PrintString_Chs(xstart, ystart, s);
-		
 		// font.RenderText(s, &tfont, xstart, ystart, 0.8, Details.color);
 		// PrintString_Chs(xstart, ystart, s);
 		return;
@@ -1399,19 +1387,55 @@ void CFont::PrintString(float xstart, float ystart, wchar *s)
 #endif
 			lineLength = x;
 			s = t + 1;
+#if 0 // def MORE_LANGUAGES
+			if (IsJapaneseFont() && !*s) {
+				x += GetStringWidth(s);
+				if (IsAnsiCharacter(s))
+					x += 21.0f;
+				float xleft = Details.centre ? xstart - x / 2 :
+					Details.rightJustify ? xstart - x :
+					xstart;
+				if (PrintString(xleft, y, start, s, 0.0f, xstart))
+				{
+					start = s;
+					if (!Details.centre && !Details.rightJustify)
+						x = xstart;
+					else
+						x = 0.0f;
 
+					y += 32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY;
+					numSpaces = 0;
+					first = true;
+					lineLength = 0.0f;
+				}
+			}
+#endif
 		}
 		// print rest
 		if(t[0] == ' ' && t[1] == '\0') t[0] = '\0';
 		x += GetStringWidth(s);
 		s = t;
 		float xleft = Details.centre ? xstart - x / 2 : Details.rightJustify ? xstart - x : xstart;
-
+#if 0 // def MORE_LANGUAGES
+		if (PrintString(xleft, y, start, s, 0.0f, xstart) && IsJapaneseFont()) {
+			start = s;
+			if (!Details.centre && !Details.rightJustify)
+				x = xstart;
+			else
+				x = 0.0f;
+			y += 32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY;
+			numSpaces = 0;
+			first = true;
+			lineLength = 0.0f;
+		}
+#else
 		PrintString(xleft, y, Details.anonymous_25, start, s, 0.0f);
+#endif
 	}
 }
 
-int CFont::GetNumberLines_Chs(float xstart, float ystart, wchar *s)
+int
+CFont::GetNumberLines_Chs(float xstart, float ystart, wchar *s)
 {
 	int result = 0;
 	float xBound;
@@ -1458,7 +1482,8 @@ int CFont::GetNumberLines_Chs(float xstart, float ystart, wchar *s)
 	return result;
 }
 
-int CFont::GetNumberLines(float xstart, float ystart, wchar *s)
+int
+CFont::GetNumberLines(float xstart, float ystart, wchar *s)
 {
 
 	int n;
@@ -1550,7 +1575,8 @@ int CFont::GetNumberLines(float xstart, float ystart, wchar *s)
 
 	return n;
 }
-void CFont::GetTextRect_Chs(CRect *rect, float xstart, float ystart, wchar *s)
+void
+CFont::GetTextRect_Chs(CRect *rect, float xstart, float ystart, wchar *s)
 {
 	short numLines = GetNumberLines_Chs(xstart, ystart, s);
 
@@ -1574,7 +1600,8 @@ void CFont::GetTextRect_Chs(CRect *rect, float xstart, float ystart, wchar *s)
 	}
 }
 
-void CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
+void
+CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
 {
 
 	int numLines;
@@ -1674,7 +1701,8 @@ void CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
 	}
 }
 
-float CFont::GetCharacterWidth(wchar c)
+float
+CFont::GetCharacterWidth(wchar c)
 {
 	uint8 tmp = LanguageSet;
 	float w = 0.0f;
@@ -1716,7 +1744,8 @@ float CFont::GetCharacterWidth(wchar c)
 #endif // MORE_LANGUAGES
 }
 
-float CFont::GetCharacterSize(wchar c)
+float
+CFont::GetCharacterSize(wchar c)
 {
 	uint8 tmp = LanguageSet;
 	float w = 0.0f;
@@ -1766,7 +1795,8 @@ float CFont::GetCharacterSize(wchar c)
 #endif // MORE_LANGUAGES
 }
 
-float CFont::GetStringWidth_Chs(wchar *s, bool spaces)
+float
+CFont::GetStringWidth_Chs(wchar *s, bool spaces)
 {
 	float result = 0.0f;
 
@@ -1798,7 +1828,8 @@ float CFont::GetStringWidth_Chs(wchar *s, bool spaces)
 
 	return result;
 }
-float CFont::GetStringWidth(wchar *s, bool spaces)
+float
+CFont::GetStringWidth(wchar *s, bool spaces)
 {
 
 	if(IsChinese()) { return GetStringWidth_Chs(s, spaces); }
@@ -1965,14 +1996,6 @@ CFont::ParseToken(wchar *str, CRGBA &color, bool &flash, bool &bold)
 	wchar *s = str + 1;
 	if(Details.color.r || Details.color.g || Details.color.b) {
 		switch(*s) {
-#ifdef VC_BMP
-			// 新加值
-		case '+': current_font_set = FT_normal; break;
-		case '-': current_font_set = FT_slant; break;
-		case '#': current_font_set = FT_regular; break;
-#endif // VC_BMP
-		
-
 		case 'B': bold = !bold; break;
 		case 'b':
 			color.r = 27;
@@ -2128,16 +2151,6 @@ CFont::ParseToken(wchar *s)
 	Details.anonymous_23 = false;
 	s++;
 	if(Details.color.r || Details.color.g || Details.color.b) switch(*s) {
-
-
-#ifdef VC_BMP
-			// 新加值
-		case '+': current_font_set = FT_normal; break;
-		case '-': current_font_set = FT_slant; break;
-		case '#': current_font_set = FT_regular; break;
-#endif // VC_BMP
-		
-
 		case 'B': Details.bBold = !Details.bBold; break;
 		case 'N':
 		case 'n': NewLine = true; break;

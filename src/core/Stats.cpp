@@ -1091,6 +1091,7 @@ CStats::ConstructStatLine(int rowIdx)
 		case CMenuManager::LANGUAGE_POLISH:
 		case CMenuManager::LANGUAGE_RUSSIAN:
 		case CMenuManager::LANGUAGE_JAPANESE:
+	    case CMenuManager::LANGUAGE_CHINESE:
 #endif
 			STAT_LINE_1(float, "FESTDFM", DistanceTravelledOnFoot, 1);
 			STAT_LINE_1(float, "FESTDCM", DistanceTravelledByCar, 1);
@@ -1229,7 +1230,11 @@ CStats::ConstructStatLine(int rowIdx)
 	FASTEST_TIME(20, "STFT_21");
 
 	if (FastestTimes[21])
+#ifdef FIX_BUGS
+		STAT_LINE_1(float, "STFT_22", Floor(FastestTimes[21] / 10) / 100, 1);
+#else
 		STAT_LINE_1(float, "STFT_22", FastestTimes[21] / 1000, 1);
+#endif
 
 	if (TopShootingRangeScore > 0.0f)
 		STAT_LINE_1(int, "TOP_SHO", TopShootingRangeScore, 0);

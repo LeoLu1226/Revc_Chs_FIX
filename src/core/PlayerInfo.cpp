@@ -85,7 +85,8 @@ CPlayerInfo::Clear(void)
 	m_bInfiniteSprint = false;
 	m_bFastReload = false;
 	m_bFireproof = false;
-	m_nMaxHealth = m_nMaxArmour = 100;
+	m_nMaxHealth = 255;
+	m_nMaxArmour = 100;
 	m_bGetOutOfJailFree = false;
 	m_bGetOutOfHospitalFree = false;
 	m_bDriveByAllowed = true;
@@ -299,7 +300,7 @@ CPlayerInfo::Process(void)
 		m_fRoadDensity = ThePaths.CalcRoadDensity(playerPos.x, playerPos.y);
 	}
 
-	m_fRoadDensity = clamp(m_fRoadDensity, 0.5f, 1.45f);
+	m_fRoadDensity = Clamp(m_fRoadDensity, 0.5f, 1.45f);
 
 	// Because vehicle enter/exit use same key binding.
 	bool enterOrExitVeh;

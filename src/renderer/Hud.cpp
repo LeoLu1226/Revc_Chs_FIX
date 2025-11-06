@@ -1,4 +1,4 @@
-#include "common.h"
+﻿#include "common.h"
 
 #include "Camera.h"
 #include "DMAudio.h"
@@ -25,6 +25,7 @@
 #include "main.h"
 #include "General.h"
 #include "VarConsole.h"
+#include <Phones.h>
 
 #if defined(FIX_BUGS)
 	#define SCREEN_SCALE_X_FIX(a) SCREEN_SCALE_X(a)
@@ -34,6 +35,12 @@
 	#define SCREEN_SCALE_X_FIX(a) (a)
 	#define SCREEN_SCALE_Y_FIX(a) (a)
 	#define SCALE_AND_CENTER_X_FIX(a) (a)
+#endif
+
+#ifdef FIX_BUGS
+#define FRAMECOUNTER CTimer::GetLogicalFrameCounter()
+#else
+#define FRAMECOUNTER CTimer::GetFrameCounter()
 #endif
 
 // Game has colors inlined in code.
@@ -204,6 +211,36 @@ struct
   { "bleeder", "" }
 };
 
+
+#define KEYJUSTDOWN1(k) ControlsManager.GetIsKeyboardKeyJustDown((RsKeyCodes)k)
+#define KEYDOWN1(k) ControlsManager.GetIsKeyboardKeyDown((RsKeyCodes)k)
+//数值映射
+float
+static mapValue(float Val,float Inmin, float InMax, float OutMin, float OutMax)
+{
+	return ((Val-Inmin)/(InMax-Inmin))*(OutMax-OutMin)+OutMin;
+
+
+}
+
+void
+PhonePickOn(CAnimBlendAssociation* assoc, void* arg)
+{
+	CPhone *phone = (CPhone *)arg;
+	wchar_t *msg = L"testtt";
+	CPlayerPed *playerPed = FindPlayerPed();
+	// 放耳朵
+	CAnimManager::BlendAnimation(playerPed->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_TALK, 8.0f);
+	//wchar *msg = phone->m_apMessages[1];
+	if(msg) {
+		CMessages::AddMessage((wchar*)msg, 3000, 0);
+		//messagesDisplayTime += 3000;
+	}
+
+}
+
+#include <AnimBlendAssociation.h>
+
 RwTexture *gpSniperSightTex;
 RwTexture *gpRocketSightTex;
 RwTexture *gpLaserSightTex;
@@ -212,11 +249,15 @@ RwTexture *gpViewFinderTex;
 
 void CHud::Draw()
 {
+
+
+
+
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
 
-	// disable hud via second controller
+	// disable hud via second controller通过第二个控制器禁用 HUD
 	if (CPad::GetPad(1)->GetStartJustDown())
 		m_Wants_To_Draw_Hud = !m_Wants_To_Draw_Hud;
 
@@ -559,12 +600,12 @@ void CHud::Draw()
 			CFont::SetDropShadowPosition(2);
 			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 
-			if (m_ItemToFlash == ITEM_HEALTH && CTimer::GetFrameCounter() & 8
+			if (m_ItemToFlash == ITEM_HEALTH && FRAMECOUNTER & 8
 				|| m_ItemToFlash != ITEM_HEALTH
 				|| playerPed->m_fHealth < 10
-				&& CTimer::GetFrameCounter() & 8) {
+				&& FRAMECOUNTER & 8) {
 				if (playerPed->m_fHealth >= 10
-					|| playerPed->m_fHealth < 10 && CTimer::GetFrameCounter() & 8) {
+					|| playerPed->m_fHealth < 10 && FRAMECOUNTER & 8) {
 
 					AsciiToUnicode("{", sPrintIcon);
 #ifdef FIX_BUGS
@@ -576,11 +617,37 @@ void CHud::Draw()
 
 					CFont::SetColor(HEALTH_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						//绘制血量数字
+						//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || CTimer::GetFrameCounter() & 4) {
+						const float barWidth = SCREEN_SCALE_X(100.f / 2.f);
+						const float right = SCREEN_SCALE_FROM_RIGHT(98.0f + 14.0f); // SCREEN_SCALE_FROM_RIGHT(37.0f);
+						const float left = right - barWidth;
+						
+						const float barHeight = SCREEN_SCALE_Y(12.0f);
+						const float top = SCREEN_SCALE_Y(63.0f) + SCREEN_SCALE_Y(8.0f) + SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * 0);
+						const float bottom = top + barHeight;
+						float maxhp = playerPed->GetPlayerInfoForThisPlayerPed()->m_nMaxHealth;
+						float hp = playerPed->m_fHealth / maxhp * 100;
+
+						CSprite2d::DrawRect(CRect(left-5, top-5, right+5, bottom+5), CRGBA(0, 60, 0, 255));//底层
+						
+						// CSprite2d::DrawLine(CVector2D(rect.left - 1, rect.top - 1), CVector2D(rect.right + 1, rect.bottom+1),
+						// Details.backgroundColor);
+						CSprite2d::DrawRectNoFill(CRect(left - 6, top - 6, right + 6, bottom + 6),
+						                          CRGBA(10, 155,100, 255));
+						float idx=mapValue(hp, 0, 100, left, right);
+						CSprite2d::DrawRect(CRect(left, top, idx, bottom), HEALTH_COLOR);
+						// CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+
+
+						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || FRAMECOUNTER & 4) {
 							// CFont::SetColor(HEALTH_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 64.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							
+
+
 						}
 					}
 				}
@@ -589,7 +656,7 @@ void CHud::Draw()
 			/*
 				DrawArmour
 			*/
-			if (m_ItemToFlash == ITEM_ARMOUR && CTimer::GetFrameCounter() & 8 || m_ItemToFlash != ITEM_ARMOUR) {
+			if (m_ItemToFlash == ITEM_ARMOUR && FRAMECOUNTER & 8 || m_ItemToFlash != ITEM_ARMOUR) {
 				CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
 				if (playerPed->m_fArmour > 1.0f) {
 					AsciiToUnicode("<", sPrintIcon);
@@ -603,11 +670,25 @@ void CHud::Draw()
 					CFont::SetColor(ARMOUR_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f+20.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						const float barWidth = SCREEN_SCALE_X(100.f / 2.f);
+						const float right = SCREEN_SCALE_FROM_RIGHT(190.0f + 14.0f); // SCREEN_SCALE_FROM_RIGHT(37.0f);
+						const float left = right - barWidth;
 
-						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || CTimer::GetFrameCounter() & 4) {
+						const float barHeight = SCREEN_SCALE_Y(12.0f);
+						const float top = SCREEN_SCALE_Y(63.0f) + SCREEN_SCALE_Y(8.0f) + SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * 0);
+						const float bottom = top + barHeight;
+						float maxArmour = playerPed->GetPlayerInfoForThisPlayerPed()->m_nMaxArmour;
+						float Armour = playerPed->m_fArmour / maxArmour * 100;
+						CSprite2d::DrawRect(CRect(left - 5, top - 5, right + 5, bottom + 5), CRGBA(0, 60, 0, 255)); // 底层
+						float idx = mapValue(Armour, 0, 100, left, right);
+						CSprite2d::DrawRect(CRect(left, top, idx, bottom), ARMOUR_COLOR);
+
+
+						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
 							// CFont::SetColor(ARMOUR_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 82.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
 					}
 				}
@@ -639,13 +720,13 @@ void CHud::Draw()
 				if (FrontEndMenuManager.m_PrefsShowHud) {
 					if (playerPed->m_pWanted->GetWantedLevel() > i
 						&& (CTimer::GetTimeInMilliseconds() > playerPed->m_pWanted->m_nLastWantedLevelChange
-							+ 2000 || CTimer::GetFrameCounter() & 4)) {
+							+ 2000 || FRAMECOUNTER & 4)) {
 
 						WANTED_COLOR.a = alpha;
 						CFont::SetColor(WANTED_COLOR);
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
 
-					} else if (playerPed->m_pWanted->m_nMinWantedLevel > i && CTimer::GetFrameCounter() & 4) {
+					} else if (playerPed->m_pWanted->m_nMinWantedLevel > i && FRAMECOUNTER & 4) {
 						WANTED_COLOR_FLASH.a = alpha;
 						CFont::SetColor(WANTED_COLOR_FLASH);
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
@@ -961,7 +1042,7 @@ void CHud::Draw()
 						TimerFlashTimer = 0;
 				}
 
-				if (CTimer::GetFrameCounter() & 4 || TimerFlashTimer == 0) {
+				if (FRAMECOUNTER & 4 || TimerFlashTimer == 0) {
 					AsciiToUnicode(CUserDisplay::OnscnTimer.m_sClocks[0].m_aClockBuffer, sTimer);
 					CFont::SetPropOn();
 					CFont::SetBackgroundOff();
@@ -999,7 +1080,7 @@ void CHud::Draw()
 							CounterFlashTimer[i] = 0;
 					}
 
-					if (CTimer::GetFrameCounter() & 4 || CounterFlashTimer[i] == 0) {
+					if (FRAMECOUNTER & 4 || CounterFlashTimer[i] == 0) {
 						if (CUserDisplay::OnscnTimer.m_sCounters[i].m_nType == COUNTER_DISPLAY_NUMBER) {
 							AsciiToUnicode(CUserDisplay::OnscnTimer.m_sCounters[i].m_aCounterBuffer, sTimer);
 							CFont::SetPropOn();
@@ -1054,7 +1135,7 @@ void CHud::Draw()
 			DrawRadar
 		*/
 		if (FrontEndMenuManager.m_PrefsRadarMode != 2 &&
-			!m_HideRadar && (m_ItemToFlash == ITEM_RADAR && CTimer::GetFrameCounter() & 8 || m_ItemToFlash != ITEM_RADAR)) {
+			!m_HideRadar && (m_ItemToFlash == ITEM_RADAR && FRAMECOUNTER & 8 || m_ItemToFlash != ITEM_RADAR)) {
 
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 			CRadar::DrawMap();
@@ -1317,7 +1398,7 @@ void CHud::Draw()
 					CFont::SetBackgroundOn();
 					CFont::SetBackGroundOnlyTextOff();
 					CFont::SetDropShadowPosition(0);
-					CFont::SetBackgroundColor(CRGBA(0, 0, 0, fAlpha * 0.9f));
+					CFont::SetBackgroundColor(CRGBA(12, 30, 38, fAlpha * 0.9f));
 					CFont::SetColor(CRGBA(175, 175, 175, 255));
 					CFont::PrintString(SCREEN_SCALE_X(34.0f), SCREEN_SCALE_Y(28.0f + (150.0f - PagerXOffset) * 0.6f), m_HelpMessageToPrint);
 					CFont::SetAlphaFade(255.0f);
@@ -1581,7 +1662,7 @@ void CHud::DrawAfterFade()
 	}
 
 	/*
-		DrawMissionTitle
+		DrawMissionTitle//任务名称?
 	*/
 	if (m_BigMessage[1][0]) {
 		if (BigMessageInUse[1] != 0.0f) {
@@ -2070,7 +2151,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 			break;
 	}
 
-	return clamp(alpha, 0.0f, 255.0f);
+	return Clamp(alpha, 0.0f, 255.0f);
 }
 
 void

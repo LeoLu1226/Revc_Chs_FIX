@@ -388,6 +388,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 	case COMMAND_IS_JAPANESE_GAME:
 #ifdef MORE_LANGUAGES
 		UpdateCompareFlag(FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_JAPANESE);
+		//UpdateCompareFlag(FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_CHINESE);
 #elif (defined GTAVC_JP_PATCH)
 		UpdateCompareFlag(true);
 #else
@@ -576,6 +577,9 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		return 0;
 	case COMMAND_DO_SAVE_GAME:
 		CollectParameters(&m_nIp, 1);
+#ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
+		UsingMobileScript = true;
+#endif
 #ifdef MISSION_REPLAY
 		SaveGameForPause(ScriptParams[0]);
 #endif

@@ -296,7 +296,7 @@ enum PedState
 	PED_DUMMY,
 	PED_PAUSE,
 	PED_ATTACK,
-	PED_FIGHT,
+	PED_FIGHT,//原地站着，可以跳跃恢复
 	PED_FACE_PHONE,
 	PED_MAKE_CALL,
 	PED_CHAT,
@@ -650,10 +650,10 @@ public:
 	CVector m_vecSpotToGuard;
 	float m_radiusToGuard;
 
-	static void *operator new(size_t);
-	static void *operator new(size_t, int);
-	static void operator delete(void*, size_t);
-	static void operator delete(void*, int);
+	static void *operator new(size_t) throw();
+	static void *operator new(size_t, int) throw();
+	static void operator delete(void*, size_t) throw();
+	static void operator delete(void*, int) throw();
 
 	CPed(uint32 pedType);
 	~CPed(void);
@@ -712,7 +712,9 @@ public:
 	void RestorePreviousObjective(void);
 	void SetIdle(void);
 #ifdef _MSC_VER
+#if _MSC_VER >= 1920 && _MSC_VER < 1929
 	__declspec(noinline) // workaround for a compiler bug, hooray MS :P
+#endif
 #endif
 	void SetObjective(eObjective, void*);
 	void SetObjective(eObjective);
@@ -762,7 +764,7 @@ public:
 	void SetAimFlag(CEntity* to);
 	void SetAimFlag(float angle);
 	void SetAmmo(eWeaponType weaponType, uint32 ammo);
-	void SetEvasiveStep(CEntity*, uint8);
+	void SetEvasiveStep(CPhysical*, uint8);
 	void GrantAmmo(eWeaponType, uint32);
 	void SetEvasiveDive(CPhysical*, uint8);
 	void SetAttack(CEntity*);

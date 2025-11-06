@@ -1,4 +1,4 @@
-#include "common.h"
+﻿#include "common.h"
 #include <time.h>
 #include "rpmatfx.h"
 #include "rphanim.h"
@@ -379,7 +379,7 @@ DoRWStuffEndOfFrame(void)
 	}
 #else
 	if (CPad::GetPad(1)->GetLeftShockJustDown() || CPad::GetPad(0)->GetFJustDown(11)) {
-		sprintf(s, "screen_%11lld.png", time(nil));
+		sprintf(s, "screen_%011lld.png", time(nil));
 		RwGrabScreen(Scene.camera, s);
 	}
 #endif
@@ -1131,11 +1131,14 @@ DisplayGameDebugText()
 #endif // #ifdef DRAW_GAME_VERSION_TEXT
 
 	FrameSamples++;
-#ifdef FIX_HIGH_FPS_BUGS_ON_FRONTEND
-	FramesPerSecondCounter += frameTime / 1000.f; // convert to seconds
+#ifdef FIX_BUGS
+	// this is inaccurate with over 1000 fps
+	static uint32 PreviousTimeInMillisecondsPauseMode = 0;
+	FramesPerSecondCounter += (CTimer::GetTimeInMillisecondsPauseMode() - PreviousTimeInMillisecondsPauseMode) / 1000.0f; // convert to seconds
+	PreviousTimeInMillisecondsPauseMode = CTimer::GetTimeInMillisecondsPauseMode();
 	FramesPerSecond = FrameSamples / FramesPerSecondCounter;
 #else
-	FramesPerSecondCounter += 1000.0f / (CTimer::GetTimeStepNonClippedInSeconds() * 1000.0f);	
+	FramesPerSecondCounter += 1000.0f / CTimer::GetTimeStepNonClippedInMilliseconds();
 	FramesPerSecond = FramesPerSecondCounter / FrameSamples;
 #endif
 	
@@ -1281,11 +1284,13 @@ void
 RenderEffects_new(void)
 {
 	PUSH_RENDERGROUP("RenderEffects_new");
+/*	// stupid to do this before the whole world is drawn!
 	CShadows::RenderStaticShadows();
 	// CRenderer::GenerateEnvironmentMap
 	CShadows::RenderStoredShadows();
 	CSkidmarks::Render();
 	CRubbish::Render();
+*/
 
 	// these aren't really effects
 	DefinedState();
@@ -1308,6 +1313,13 @@ if(gbRenderFadingInEntities)
 	CRenderer::RenderFadingInEntities();
 
 	// actual effects here
+
+	// from above
+	CShadows::RenderStaticShadows();
+	CShadows::RenderStoredShadows();
+	CSkidmarks::Render();
+	CRubbish::Render();
+
 	CGlass::Render();
 	// CMattRenderer::ResetRenderStates
 	DefinedState();
@@ -1401,6 +1413,8 @@ RenderEffects(void)
 	POP_RENDERGROUP();
 }
 
+
+
 void
 Render2dStuff(void)
 {
@@ -1461,6 +1475,7 @@ Render2dStuff(void)
 	else
 #endif
 		CHud::Draw();
+
 
 	CSpecialFX::Render2DFXs();
 	CUserDisplay::OnscnTimer.ProcessForDisplay();
@@ -1551,13 +1566,18 @@ Idle(void *arg)
 
 	PUSH_MEMID(MEMID_RENDER);
 
+
+	//判断暂停菜单是否激活?
 	if(!FrontEndMenuManager.m_bMenuActive && TheCamera.GetScreenFadeStatus() != FADE_2)
 	{
 		// This is from SA, but it's nice for windowed mode
 #if defined(GTA_PC) && !defined(RW_GL3)
+		
 		RwV2d pos;
 		pos.x = SCREEN_WIDTH / 2.0f;
 		pos.y = SCREEN_HEIGHT / 2.0f;
+		CPad *pad = CPad::GetPad(0);
+		if(!pad->IsDisableMouse())//是否停止鼠标锁定
 		RsMouseSetPos(&pos);
 #endif
 
@@ -1667,6 +1687,8 @@ Idle(void *arg)
 	if (gbShowTimebars)
 		tbDisplay();
 
+
+
 	DoRWStuffEndOfFrame();
 
 	POP_MEMID();	// MEMID_RENDER
@@ -1677,10 +1699,11 @@ Idle(void *arg)
 
 popret:	POP_MEMID();	// MEMID_RENDER
 }
-
+//前端
 void
 FrontendIdle(void)
 {
+
 	CDraw::CalculateAspectRatio();
 	CTimer::Update();
 	CSprite2d::SetRecipNearClip(); // this should be on InitialiseRenderWare according to PS2 asm. seems like a bug fix
@@ -1698,6 +1721,7 @@ FrontendIdle(void)
 	if(!RsCameraBeginUpdate(Scene.camera))
 		return;
 
+
 	DefinedState(); // seems redundant, but breaks resolution change.
 	RenderMenus();
 #ifdef XBOX_MESSAGE_SCREEN
@@ -1706,6 +1730,10 @@ FrontendIdle(void)
 	DoFade();
 	Render2dStuffAfterFade();
 	CFont::DrawFonts();
+
+
+
+	
 	DoRWStuffEndOfFrame();
 }
 

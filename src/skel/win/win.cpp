@@ -1,4 +1,4 @@
-#if defined RW_D3D9 || defined RWLIBS || defined __MWERKS__
+﻿#if defined RW_D3D9 || defined RWLIBS || defined __MWERKS__
 
 #define _WIN32_WINDOWS 0x0500
 #define WINVER 0x0500
@@ -98,6 +98,8 @@ static psGlobalType PsGlobal;
 #include "MemoryCard.h"
 #include "Font.h"
 #endif
+
+
 	
 VALIDATE_SIZE(psGlobalType, 0x28);
 
@@ -915,14 +917,14 @@ void WaitForState(FILTER_STATE State)
  */
 void HandleGraphEvent(void)
 {
-	LONG evCode, evParam1, evParam2;
+	LONG evCode;
+	LONG_PTR evParam1, evParam2;
 	HRESULT hr=S_OK;
 	
 	ASSERT(pME != nil);
 
 	// Process all queued events
-	while (SUCCEEDED(pME->GetEvent(&evCode, (LONG_PTR *)&evParam1,
-		(LONG_PTR *)&evParam2, 0)))
+	while (SUCCEEDED(pME->GetEvent(&evCode, &evParam1, &evParam2, 0)))
 	{
 		// Free memory associated with callback, since we're not using it
 		hr = pME->FreeEventParams(evCode, evParam1, evParam2);
@@ -958,13 +960,13 @@ void HandleGraphEvent(void)
 /*
  *****************************************************************************
  */ 
+// Forward declare message handler from imgui_impl_win32.cpp
 LRESULT CALLBACK
 MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	POINTS points;
 	static BOOL noMemory = FALSE;
 
-	
 	switch( message )
 	{
 		case WM_SETCURSOR:
@@ -1074,9 +1076,18 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_MOUSEMOVE:
 		{
 			points = MAKEPOINTS(lParam);
-
-			FrontEndMenuManager.m_nMouseTempPosX = points.x;
-			FrontEndMenuManager.m_nMouseTempPosY = points.y;
+		        //CPad *pad = CPad::GetPad(0);
+		       // static float mx = 0;
+		       // static float my = 0;
+		        //static bool lock = false;
+		       // if(!pad->IsDisableMouse()) {}
+			       //启用了鼠标
+				FrontEndMenuManager.m_nMouseTempPosX = points.x;
+				FrontEndMenuManager.m_nMouseTempPosY = points.y;
+			       
+		       
+		        
+			
 
 			return 0L;
 		}
@@ -1498,7 +1509,7 @@ psSelectDevice()
 #ifdef DEFAULT_NATIVE_RESOLUTION
 				GcurSelVM = 1;
 #else
-				MessageBox(nil, "Cannot find 640x480 video mode", "GTA3", MB_OK);
+				MessageBox(nil, "Cannot find 640x480 video mode", "GTA: Vice City", MB_OK);
 				return FALSE;
 #endif
 			}
@@ -1541,7 +1552,7 @@ psSelectDevice()
 		}
 
 		if(bestFsMode < 0){
-			MessageBox(nil, "Cannot find desired video mode", "GTA3", MB_OK);
+			MessageBox(nil, "Cannot find desired video mode", "GTA: Vice City", MB_OK);
 			return FALSE;
 		}
 		GcurSelVM = bestFsMode;
@@ -2070,15 +2081,21 @@ WinMain(HINSTANCE instance,
 		RsEventHandler(rsPREINITCOMMANDLINE, argv[i]);
 	}
 
+
+	// Setup Platform/Renderer backends
+	
+	
+
 	/*
 	 * Create the window...
 	 */
 	PSGLOBAL(window) = InitInstance(instance);
+	
 	if( PSGLOBAL(window) == nil )
 	{
 		return FALSE;
 	}
-
+	
 	PSGLOBAL(instance) = instance;
 	
 	ControlsManager.MakeControllerActionsBlank();
@@ -2156,6 +2173,8 @@ WinMain(HINSTANCE instance,
 	 */
 	ShowWindow(PSGLOBAL(window), cmdShow);
 	UpdateWindow(PSGLOBAL(window));
+
+
 	
 	{
 		CFileMgr::SetDirMyDocuments();
@@ -2179,10 +2198,12 @@ WinMain(HINSTANCE instance,
 
 #ifdef LOAD_INI_SETTINGS
 		LoadINIControllerSettings();
-		if (connectedPadButtons != 0) {
-			ControlsManager.InitDefaultControlConfigJoyPad(connectedPadButtons);
-			SaveINIControllerSettings();
-		}
+		if (connectedPadButtons != 0)
+			ControlsManager.InitDefaultControlConfigJoyPad(connectedPadButtons); // add (connected-saved) amount of new button assignments on top of ours
+
+		// these have 2 purposes: creating .ini at the start, and adding newly introduced settings to old .ini at the start
+		SaveINISettings();
+		SaveINIControllerSettings();
 #endif
 	}
 	

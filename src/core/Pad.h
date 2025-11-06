@@ -35,6 +35,7 @@ public:
 };
 VALIDATE_SIZE(CControllerState, 0x2A);
 
+
 class CMouseControllerState
 {
 public:
@@ -186,6 +187,7 @@ public:
 	static CMouseControllerState OldMouseControllerState;
 	static CMouseControllerState NewMouseControllerState;
 	static CMouseControllerState PCTempMouseControllerState;
+	static bool DisableMouseController; // 禁用鼠标事件
 	
 	
 #ifdef GTA_PS2_STUFF
@@ -317,6 +319,10 @@ public:
 
 	float GetMouseX() { return NewMouseControllerState.x; }
 	float GetMouseY() { return NewMouseControllerState.y; }
+
+	void SetDisableMouse() { DisableMouseController = true; }
+	bool IsDisableMouse() {return DisableMouseController; }
+	void SetEnableMouse() { DisableMouseController = false; }
 
 	// keyboard
 	

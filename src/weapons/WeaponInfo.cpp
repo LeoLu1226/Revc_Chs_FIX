@@ -275,6 +275,13 @@ CWeaponInfo::FindWeaponType(char *name)
 	return WEAPONTYPE_UNARMED;
 }
 
+char *
+CWeaponInfo::FindWeaponName(eWeaponType weaponType)
+{
+	if(weaponType > sizeof ms_aWeaponNames) return "NULL";
+	return ms_aWeaponNames[weaponType];
+}
+
 eWeaponFire
 CWeaponInfo::FindWeaponFireType(char *name)
 {

@@ -35,11 +35,7 @@
 #include "FileLoader.h"
 #include "User.h"
 #include "sampman.h"
-///#include <Imgui/CheatMenu.h>
-#include <ExMenu.h>
-#include <Imgui\imgui.h>
-//#include <Imgui/imgui.h>
-//#include "../../build/NewFont.h"
+
 
 // Similar story to Hud.cpp:
 // Game has colors inlined in code.
@@ -572,8 +568,6 @@ CMenuManager::SetFrontEndRenderStates(void)
 void
 CMenuManager::Initialise(void)
 {
-	
-
 	DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 255);
 	DoRWStuffEndOfFrame();
 	m_AllowNavigation = false;
@@ -921,7 +915,6 @@ CMenuManager::DisplaySlider(float x, float y, float mostLeftBarSize, float mostR
 	return lastActiveBarX;
 }
 
-// 在开始新游戏或载入游戏前进行设置
 void
 CMenuManager::DoSettingsBeforeStartingAGame()
 {
@@ -931,14 +924,14 @@ CMenuManager::DoSettingsBeforeStartingAGame()
 #endif
 	DMAudio.DestroyAllGameCreatedEntities();
 	DMAudio.Service();
-	m_bShutDownFrontEndRequested = true;// 关键：请求关闭前端菜单
-	m_bWantToRestart = true;// 关键：表明是重新开始/新游戏
+	m_bShutDownFrontEndRequested = true;
+	m_bWantToRestart = true;
 	DMAudio.SetEffectsFadeVol(0);
 	DMAudio.SetMusicFadeVol(0);
 	for (int i = 0; i < NUM_RADIOS; i++)
 		CStats::FavoriteRadioStationList[i] = 0.0f;
 
-	SwitchMenuOnAndOff();// 这会实际触发菜单关闭
+	SwitchMenuOnAndOff();
 	DMAudio.ResetTimers(CTimer::GetTimeInMilliseconds());
 }
 
@@ -947,7 +940,6 @@ CSprite2d m_Sprite;
 #define KEYJUSTDOWN(k) ControlsManager.GetIsKeyboardKeyJustDown((RsKeyCodes)k)
 #define KEYDOWN(k) ControlsManager.GetIsKeyboardKeyDown((RsKeyCodes)k)
 bool init = false;
-
 
 void
 CMenuManager::DrawStandardMenus(bool activeScreen)
@@ -994,7 +986,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 			break;
 	}
 
-	// Page name 右上标题
+	// Page name
 	if (aScreens[m_nCurrScreen].m_ScreenName[0] != '\0') {
 
 		SET_FONT_FOR_MENU_HEADER
@@ -1002,47 +994,9 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 		CFont::PrintString(SCREEN_STRETCH_FROM_RIGHT(MENUHEADER_POS_X) - MENU_X(7.f), SCREEN_SCALE_Y(MENUHEADER_POS_Y + 7.f), TheText.Get(aScreens[m_nCurrScreen].m_ScreenName));
 
 		CFont::SetColor(CRGBA(HEADER_COLOR.r, HEADER_COLOR.g, HEADER_COLOR.b, FadeIn(255)));
-		
 		CFont::PrintString(SCREEN_STRETCH_FROM_RIGHT(MENUHEADER_POS_X), SCREEN_SCALE_Y(MENUHEADER_POS_Y), TheText.Get(aScreens[m_nCurrScreen].m_ScreenName));
-		
 	}
-
-	/*
-	//测试
-	bool static  isshow=true;
-	CPad *pad = CPad::GetPad(0);
-	if(KEYJUSTDOWN(RsKeyCodes::rsF5)) 
-	{
-		isshow = !isshow;
-	}
-	static int chsSlot = 0;
-	if(isshow) 
-	{ 
-		pad->SetDisableMouse();
-		static float x1 = 0;
-		static float y1 = 0;
-
-		static float x2 = 10;
-		static float y2 = 0;
-
-		static float x3 = 10;
-		static float y3 = 10;
-
-		static float x4 = 0;
-		static float y4 = 10;
-		
-
-		
-		
-	}
-	else pad->SetEnableMouse();
-		*/
 	
-	
-	//CMenu::CheatUpDate();
-	//CMenu::MenuDraw();
-
-
 	// Label
 	wchar *str;
 	if (aScreens[m_nCurrScreen].m_aEntries[0].m_Action == MENUACTION_LABEL) {
@@ -1175,12 +1129,6 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 						leftText = TheText.Get(gString);
 					}
 				} else {
-					char *ss = (char*)aScreens[m_nCurrScreen].m_aEntries[i].m_EntryName;
-					if(!strncmp(ss, "FEP_PUT",7)) 
-					{
-						wchar_t *nm=L"JOIN_GAME";
-						leftText = (wchar*)nm;
-					}else
 					leftText = TheText.Get(aScreens[m_nCurrScreen].m_aEntries[i].m_EntryName);
 				}
 
@@ -1356,38 +1304,23 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 					}
 					break;
 				case MENUACTION_AUDIOHW:
-				{
 					if (m_nPrefsAudio3DProviderIndex == NO_AUDIO_PROVIDER)
 						rightText = TheText.Get("FEA_NAH");
 					else if (m_nPrefsAudio3DProviderIndex == -1)
 						rightText = TheText.Get("FEA_ADP");
-
 					else {
-
-						char *rawProvider = NULL;
-						if(m_nPrefsAudio3DProviderIndex>0)
-						{
-							rawProvider = DMAudio.Get3DProviderName(m_nPrefsAudio3DProviderIndex);
-							AsciiToUnicode(rawProvider, unicodeTemp);
-							char *provider = UnicodeToAscii(unicodeTemp); // genius
-							strupr(provider);
-							if(!strcmp(provider, "DIRECTSOUND3D HARDWARE SUPPORT")) {
-								strcpy(provider, "DSOUND3D HARDWARE SUPPORT");
-							} else if(!strcmp(provider, "DIRECTSOUND3D SOFTWARE EMULATION")) {
-								strcpy(provider, "DSOUND3D SOFTWARE EMULATION");
-							}
-							AsciiToUnicode(provider, unicodeTemp);
-							rightText = unicodeTemp;
-						} else 
-						{
-							char *provider = "SOUND3D_ERROR"; // genius
-							AsciiToUnicode(provider, unicodeTemp);
-							rightText = unicodeTemp;
-							;
+						char *rawProvider = DMAudio.Get3DProviderName(m_nPrefsAudio3DProviderIndex);
+						AsciiToUnicode(rawProvider, unicodeTemp);
+						char *provider = UnicodeToAscii(unicodeTemp); // genius
+						strupr(provider);
+						if (!strcmp(provider, "DIRECTSOUND3D HARDWARE SUPPORT")) {
+							strcpy(provider, "DSOUND3D HARDWARE SUPPORT");
+						} else if (!strcmp(provider, "DIRECTSOUND3D SOFTWARE EMULATION")) {
+							strcpy(provider, "DSOUND3D SOFTWARE EMULATION");
 						}
-						
+						AsciiToUnicode(provider, unicodeTemp);
+						rightText = unicodeTemp;
 					}
-				}
 					break;
 				case MENUACTION_SPEAKERCONF: {
 					if (m_nPrefsAudio3DProviderIndex == NO_AUDIO_PROVIDER)
@@ -3042,12 +2975,6 @@ CMenuManager::InitialiseChangedLanguageSettings()
 		CTimer::Stop();
 		TheText.Unload();
 		TheText.Load();
-		//处理切换语言任务文本丢失
-		const char *miss = TheText.GetMissiontTableName();
-		if(strlen(miss) != 0)
-		{ 
-			TheText.LoadMissionText((char*)miss);
-		}
 #ifdef FIX_BUGS
 		if (gGameState > GS_INIT_ONCE)
 #endif
@@ -4728,7 +4655,6 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 	if (m_nCurrScreen == MENUPAGE_START_MENU || m_nCurrScreen == MENUPAGE_NEW_GAME || m_nCurrScreen == MENUPAGE_NEW_GAME_RELOAD) {
 		if (CPad::GetPad(0)->GetChar('R')) {
 			CTheScripts::ScriptToLoad = 1;
-			//执行开始游戏
 			DoSettingsBeforeStartingAGame();
 			return;
 		}
@@ -5419,7 +5345,7 @@ CMenuManager::CloseDialog(void)
 		m_bSaveWasSuccessful = false; // i don't know where XBOX resets that
 		m_pDialogText = gameSaved;
 		SetDialogTimer(1000);
-	    ProcessDialogfTimer();
+	    ProcessDialogTimer();
 	} else {
 		ToggleDialog(false);
 	}
@@ -5940,7 +5866,7 @@ CMenuManager::PrintMap(void)
 		m_aFrontEndSprites[MENUSPRITE_MAPBOT03].Draw(CRect(m_fMapCenterX + halfTile, m_fMapCenterY + halfTile,
 			m_fMapCenterX + m_fMapSize, m_fMapCenterY + m_fMapSize), CRGBA(255, 255, 255, FadeIn(255)));
 	}
-	
+
 	CRadar::DrawBlips();
 	if (m_PrefsShowLegends) {
 		CFont::SetWrapx(MENU_X_RIGHT_ALIGNED(40.0f));

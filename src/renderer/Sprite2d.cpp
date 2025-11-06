@@ -342,6 +342,82 @@ CSprite2d::DrawRect(const CRect &r, const CRGBA &col)
 }
 
 void
+CSprite2d::DrawRectNoFill(const CRect &r, const CRGBA &col)
+{
+
+	//RwIm2DVertex *vertices = nullptr;
+	float x = r.left;
+	float y = r.top;
+	float w = r.right - r.left;
+	float h = r.bottom - r.top;
+	DrawLine(x, y, x + w, y , col);//ÏÂ
+	DrawLine(x, y+h, x+w, y+h, col);//ÉÏ
+
+	DrawLine(x, y, x, y+h, col);         // ×ó
+	DrawLine(x+w, y, x+w, y +h, col); // ÓÒ
+
+}
+
+void
+CSprite2d::DrawLine(const float x, const float y, const float x1, const float y1, const CRGBA &col)
+{
+	//float LineW = 1.0f;//Ïß¿í
+	CRect r(x,y,x1,y1);
+	//SetVertices(r, col, col, col, col);
+	float offset = 1.0f / 1024.0f;
+	
+	// This is what we draw:
+	// 0---1
+	// | / |
+	// 3---2
+	RwIm2DVertexSetScreenX(&maVertices[0], x);
+	RwIm2DVertexSetScreenY(&maVertices[0], y);
+	RwIm2DVertexSetScreenZ(&maVertices[0], NearScreenZ);
+	RwIm2DVertexSetCameraZ(&maVertices[0], NearCamZ);
+	RwIm2DVertexSetRecipCameraZ(&maVertices[0], RecipNearClip);
+	RwIm2DVertexSetIntRGBA(&maVertices[0], col.r, col.g, col.b, col.a);
+	RwIm2DVertexSetU(&maVertices[0], 0.0f + offset, RecipNearClip);
+	RwIm2DVertexSetV(&maVertices[0], 0.0f + offset, RecipNearClip);
+
+	RwIm2DVertexSetScreenX(&maVertices[1], x1);
+	RwIm2DVertexSetScreenY(&maVertices[1], y1);
+	RwIm2DVertexSetScreenZ(&maVertices[1], NearScreenZ);
+	RwIm2DVertexSetCameraZ(&maVertices[1], NearCamZ);
+	RwIm2DVertexSetRecipCameraZ(&maVertices[1], RecipNearClip);
+	RwIm2DVertexSetIntRGBA(&maVertices[1], col.r, col.g, col.b, col.a);
+	RwIm2DVertexSetU(&maVertices[1], 1.0f + offset, RecipNearClip);
+	RwIm2DVertexSetV(&maVertices[1], 0.0f + offset, RecipNearClip);
+
+
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATESHADEMODE, (void *)rwSHADEMODEFLAT);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void *)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void *)FALSE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)(col.a != 255));
+	RwIm2DRenderPrimitive(rwPRIMTYPELINELIST, maVertices, 2);
+	//RwIm2DRenderLine(maVertices, 2, 0, 1);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void *)TRUE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void *)TRUE);
+	RwRenderStateSet(rwRENDERSTATESHADEMODE, (void *)rwSHADEMODEGOURAUD);
+
+	/*
+	RwIm2DVertexSetScreenX(&maVertices[0], 0.0f);
+	RwIm2DVertexSetScreenY(&maVertices[0], 0.0f);
+	RwIm2DVertexSetScreenZ(&maVertices[0], RwIm2DGetNearScreenZ());
+	RwIm2DVertexSetCameraZ(&maVertices[0], NearCamZ);
+	RwIm2DVertexSetIntRGBA(&maVertices[0], col.r, col.g, col.b, col.a);
+
+	RwIm2DRenderLine(&maVertices[0], 2, 0, 1);
+	*/
+}
+
+void
+CSprite2d::DrawLine(const CVector2D v1, const CVector2D v2, const CRGBA &col)
+{
+	DrawLine(v1.x, v1.y, v2.x, v2.y, col);
+}
+
+void
 CSprite2d::DrawRect(const CRect &r, const CRGBA &c0, const CRGBA &c1, const CRGBA &c2, const CRGBA &c3)
 {
 	SetVertices(r, c0, c1, c2, c3);

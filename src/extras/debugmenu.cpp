@@ -1013,7 +1013,7 @@ void
 DebugMenuProcess(void)
 {
 	// We only process some input here
-
+	//m¼ü²Ëµ¥
 	CPad *pad = CPad::GetPad(0);
 	if(CTRLJUSTDOWN('M'))
 		menuOn = !menuOn;

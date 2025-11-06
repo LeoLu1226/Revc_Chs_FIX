@@ -878,7 +878,7 @@ CMouseControllerState CMousePointerStateHelper::GetMouseSetUp()
 
 	return state;
 }
-
+bool CPad::DisableMouseController = false;
 void CPad::UpdateMouse()
 {
 #if defined RW_D3D9 || defined RWLIBS
@@ -917,8 +917,12 @@ void CPad::UpdateMouse()
 			else if ( state.lZ < 0 )
 				PCTempMouseControllerState.WHEELDN = 1;
 
-			OldMouseControllerState = NewMouseControllerState;
-			NewMouseControllerState = PCTempMouseControllerState;
+			if(!IsDisableMouse()) 
+			{
+				OldMouseControllerState = NewMouseControllerState;
+				NewMouseControllerState = PCTempMouseControllerState;
+			}
+			
 		}
 	}
 #else

@@ -38,8 +38,12 @@ public:
 	static void SetVertices(RwIm2DVertex *verts, const CRect &r, const CRGBA &c0, const CRGBA &c1, const CRGBA &c2, const CRGBA &c3,
 		float u0, float v0, float u1, float v1, float u3, float v3, float u2, float v2);
 
+
+	static void DrawLine(const float x, const float y, const float x1, const float y1, const CRGBA &col);
+	static void DrawLine(const CVector2D v1, const CVector2D v2, const CRGBA &col);
 	static void DrawRect(const CRect &r, const CRGBA &c0, const CRGBA &c1, const CRGBA &c2, const CRGBA &c3);
 	static void DrawRect(const CRect &r, const CRGBA &col);
+	static void DrawRectNoFill(const CRect &r, const CRGBA &col);
 	static void DrawRectXLU(const CRect &r, const CRGBA &c0, const CRGBA &c1, const CRGBA &c2, const CRGBA &c3);
 	static void DrawAnyRect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4,
 		const CRGBA &c0, const CRGBA &c1, const CRGBA &c2, const CRGBA &c3);

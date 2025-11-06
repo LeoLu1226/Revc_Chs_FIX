@@ -210,9 +210,6 @@ enum eMenuScreen
 	MENUPAGE_MOUSE_CONTROLS = 31,
 	MENUPAGE_PAUSE_MENU = 32,
 	MENUPAGE_NONE = 33, // Then chooses main menu or pause menu 
-	//MENUPAGE_NEW_OL_GAME_=34,//创建多人房间游戏
-	//MENUPAGE_PUT_OL_GAME = 35,  // 加入游戏
-
 #ifdef GAMEPAD_MENU
 	MENUPAGE_CONTROLLER_SETTINGS,
 #endif
@@ -810,21 +807,13 @@ public:
 	void DisplayHelperText(char*);
 	int DisplaySlider(float, float, float, float, float, float, float);
 	void DoSettingsBeforeStartingAGame();
-	// 绘制开始菜单
 	void DrawStandardMenus(bool);
-	//绘制控制器绑定
 	void DrawControllerBound(int32, int32, int32, int8);
-	//绘制控制器屏幕额外文本
 	void DrawControllerScreenExtraText(int, int, int);
-	//绘制控制器设置界面
 	void DrawControllerSetupScreen();
-	// 绘制退出界面
 	void DrawQuitGameScreen();
-	//绘制前景
 	void DrawFrontEnd();
-	//绘制背景
 	void DrawBackground(bool transitionCall);
-	//绘制玩家设置界面
 	void DrawPlayerSetupScreen(bool);
 	int FadeIn(int alpha);
 	int GetStartOptionsCntrlConfigScreens();

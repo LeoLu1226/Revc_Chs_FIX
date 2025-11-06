@@ -13,8 +13,15 @@
 #include "RpAnimBlend.h"
 #include "AnimBlendAssociation.h"
 #include "soundlist.h"
+#include "SaveBuf.h"
 #ifdef FIX_BUGS
 #include "Replay.h"
+#endif
+
+#ifdef COMPATIBLE_SAVES
+#define PHONEINFO_SAVE_SIZE 0xA30
+#else
+#define PHONEINFO_SAVE_SIZE sizeof(CPhoneInfo)
 #endif
 
 CPhoneInfo gPhoneInfo;
@@ -23,15 +30,23 @@ bool CPhoneInfo::bDisplayingPhoneMessage;  // is phone picked up
 uint32 CPhoneInfo::PhoneEnableControlsTimer;
 CPhone *CPhoneInfo::pPhoneDisplayingMessages;
 bool CPhoneInfo::bPickingUpPhone;
-CPed *CPhoneInfo::pCallBackPed; // ped who picking up the phone (reset after pickup cb)
+CPed *CPhoneInfo::pCallBackPed; //PED谁拿起电话（拿起cb后重置） ped who picking up the phone (reset after pickup cb)
 
 /*
 	Entering phonebooth cutscene, showing messages and triggering these things
 	by checking coordinates happens in here - blue mission marker is cosmetic.
+        进入电话亭过场动画，显示消息并触发这些内容
+通过检查坐标发生在这里 - 蓝色任务标记是装饰性的。
 
 	Repeated message means after the script set the messages for a particular phone,
 	player can pick the phone again with the same messages appearing,
 	after 60 seconds of last phone pick-up.
+        进入电话亭过场动画，显示消息并触发这些内容
+通过检查坐标发生在这里 - 蓝色任务标记是装饰性的。
+
+重复消息是指在脚本为特定电话设置消息后，
+玩家可以再次拿起手机，并出现相同的消息，
+最后一次接听电话 60 秒后。
 */
 
 void
@@ -197,14 +212,27 @@ void
 CPhoneInfo::Load(uint8 *buf, uint32 size)
 {
 INITSAVEBUF
-	m_nMax = ReadSaveBuf<int32>(buf);
-	m_nScriptPhonesMax = ReadSaveBuf<int32>(buf);
+	ReadSaveBuf(&m_nMax, buf);
+	ReadSaveBuf(&m_nScriptPhonesMax, buf);
 	for (int i = 0; i < NUMPHONES; i++) {
-		m_aPhones[i] = ReadSaveBuf<CPhone>(buf);
+#ifdef COMPATIBLE_SAVES
+		ReadSaveBuf(&m_aPhones[i].m_vecPos, buf);
+		SkipSaveBuf(buf, 6 * 4);
+		ReadSaveBuf(&m_aPhones[i].m_repeatedMessagePickupStart, buf);
+		int32 tmp;
+		ReadSaveBuf(&tmp, buf);
+		// It's saved as building pool index in save file, convert it to true entity
+		m_aPhones[i].m_pEntity = tmp != 0 ? CPools::GetBuildingPool()->GetSlot(tmp - 1) : nil;
+		ReadSaveBuf(&m_aPhones[i].m_nState, buf);
+		ReadSaveBuf(&m_aPhones[i].m_visibleToCam, buf);
+		SkipSaveBuf(buf, 3);
+#else
+		ReadSaveBuf(&m_aPhones[i], buf);
 		// It's saved as building pool index in save file, convert it to true entity
 		if (m_aPhones[i].m_pEntity) {
 			m_aPhones[i].m_pEntity = CPools::GetBuildingPool()->GetSlot((uintptr)m_aPhones[i].m_pEntity - 1);
 		}
+#endif
 	}
 VALIDATESAVEBUF(size)
 }
@@ -212,6 +240,7 @@ VALIDATESAVEBUF(size)
 void
 CPhoneInfo::SetPhoneMessage_JustOnce(int phoneId, wchar *msg1, wchar *msg2, wchar *msg3, wchar *msg4, wchar *msg5, wchar *msg6)
 {
+	//如果至少有一条消息，则应为 msg1。
 	// If there is at least one message, it should be msg1.
 	if (msg1) {
 		m_aPhones[phoneId].m_apMessages[0] = msg1;
@@ -249,6 +278,8 @@ CPhoneInfo::GrabPhone(float xPos, float yPos)
 	// "Grab" doesn't mean picking up the phone, it means allocating some particular phone to
 	// whoever called the 024A opcode first with the position parameters closest to phone.
 	// Same phone won't be available on next run of this function.
+	//抓取”并不意味着拿起手机，而是意味着将一些特定的手机分配给
+	//谁先用最接近手机的位置参数呼叫 024A 操作码。 下次运行此功能时，同一部手机将不可用。
 
 	int nearestPhoneId = -1;
 	CVector pos(xPos, yPos, 0.0f);
@@ -298,17 +329,29 @@ CPhoneInfo::Initialise(void)
 void
 CPhoneInfo::Save(uint8 *buf, uint32 *size)
 {
-	*size = sizeof(CPhoneInfo);
+	*size = PHONEINFO_SAVE_SIZE;
 INITSAVEBUF
 	WriteSaveBuf(buf, m_nMax);
 	WriteSaveBuf(buf, m_nScriptPhonesMax);
 	for(int phoneId = 0; phoneId < NUMPHONES; phoneId++) {
+#ifdef COMPATIBLE_SAVES
+		WriteSaveBuf(buf, m_aPhones[phoneId].m_vecPos);
+		ZeroSaveBuf(buf, 6 * 4);
+		WriteSaveBuf(buf, m_aPhones[phoneId].m_repeatedMessagePickupStart);
+		// Convert entity pointer to building pool index while saving
+		int32 tmp = m_aPhones[phoneId].m_pEntity ? CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)m_aPhones[phoneId].m_pEntity) + 1 : 0;
+		WriteSaveBuf(buf, tmp);
+		WriteSaveBuf(buf, m_aPhones[phoneId].m_nState);
+		WriteSaveBuf(buf, m_aPhones[phoneId].m_visibleToCam);
+		ZeroSaveBuf(buf, 3);
+#else
 		CPhone* phone = WriteSaveBuf(buf, m_aPhones[phoneId]);
 
 		// Convert entity pointer to building pool index while saving
 		if (phone->m_pEntity) {
 			phone->m_pEntity = (CEntity*) (CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)phone->m_pEntity) + 1);
 		}
+#endif
 	}
 VALIDATESAVEBUF(*size)
 }
