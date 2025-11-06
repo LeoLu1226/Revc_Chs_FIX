@@ -1,3 +1,8 @@
+﻿
+# Revc的中文化支持和cleo支持
+中文的已经好了 gamefiles文件夹里面已经包含无名的文本和贴图了
+cleo下次更新会加入
+
 # Take Two, all of their employees, and anyone who supports them can go fuck themselves :). Sincerely, Starman. 
 
 <img src="https://github.com/GTAmodding/re3/blob/miami/logo.png?raw=true" alt="reVC logo" width="200">
