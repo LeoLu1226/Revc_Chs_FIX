@@ -15,6 +15,9 @@
 
 #define MENUACTION_SCALE_MULT 0.9f
 
+#define MENUSLIDER_BARS 16
+#define MENUSLIDER_LOGICAL_BARS MENUSLIDER_BARS
+
 #define MENULABEL_X_MARGIN 80.0f
 #define MENULABEL_POS_X 100.0f
 #define MENULABEL_POS_Y 97.0f
@@ -26,9 +29,17 @@
 #define RIGHT_ALIGNED_TEXT_RIGHT_MARGIN(xMargin) (xMargin + 30.0f)
 
 #define MENURADIO_ICON_FIRST_X 238.f
+#ifdef EXTERNAL_3D_SOUND
 #define MENURADIO_ICON_Y 288.0f
+#else
+#define MENURADIO_ICON_Y 248.0f
+#endif
 #define MENURADIO_ICON_SIZE 60.0f
+#ifdef EXTERNAL_3D_SOUND
 #define MENURADIO_SELECTOR_START_Y 285.f // other options should leave room on the screen
+#else
+#define MENURADIO_SELECTOR_START_Y 245.0f
+#endif
 #define MENURADIO_SELECTOR_HEIGHT 65.f
 
 #define MENUSLIDER_X 500.0f
@@ -199,6 +210,9 @@ enum eMenuScreen
 	MENUPAGE_MOUSE_CONTROLS = 31,
 	MENUPAGE_PAUSE_MENU = 32,
 	MENUPAGE_NONE = 33, // Then chooses main menu or pause menu 
+	//MENUPAGE_NEW_OL_GAME_=34,//创建多人房间游戏
+	//MENUPAGE_PUT_OL_GAME = 35,  // 加入游戏
+
 #ifdef GAMEPAD_MENU
 	MENUPAGE_CONTROLLER_SETTINGS,
 #endif
@@ -218,8 +232,11 @@ enum eMenuScreen
 #ifdef DETECT_JOYSTICK_MENU
 	MENUPAGE_DETECT_JOYSTICK,
 #endif
-
 #endif
+#ifdef MISSION_REPLAY
+	MENUPAGE_MISSION_RETRY,
+#endif
+
 	MENUPAGE_OUTRO, // Originally 34, but CFO needs last screen to be empty to count number of menu pages
 	MENUPAGES
 };
@@ -227,6 +244,7 @@ enum eMenuScreen
 enum eMenuAction
 {
 #ifdef CUSTOM_FRONTEND_OPTIONS
+	MENUACTION_CFO_SLIDER = -3,
 	MENUACTION_CFO_SELECT = -2,
 	MENUACTION_CFO_DYNAMIC = -1,
 #endif
@@ -288,6 +306,10 @@ enum eMenuAction
 	MENUACTION_CTRLVIBRATION,
 	MENUACTION_CTRLCONFIG,
 #endif
+#ifdef MISSION_REPLAY
+	MENUACTION_REJECT_RETRY,
+	MENUACTION_UNK114
+#endif
 };
 
 enum eCheckHover
@@ -328,6 +350,10 @@ enum eCheckHover
 	HOVEROPTION_DECREASE_MOUSESENS,
 	HOVEROPTION_INCREASE_MP3BOOST,
 	HOVEROPTION_DECREASE_MP3BOOST,
+#ifdef CUSTOM_FRONTEND_OPTIONS
+	HOVEROPTION_INCREASE_CFO_SLIDER,
+	HOVEROPTION_DECREASE_CFO_SLIDER,
+#endif
 	HOVEROPTION_NOT_HOVERING,
 };
 
@@ -400,7 +426,7 @@ struct CCustomScreenLayout {
 
 struct CCFO
 {
-	int8 *value;
+	void *value;
 	const char *saveCat;
 	const char *save;
 };
@@ -428,6 +454,24 @@ struct CCFOSelect : CCFO
 		this->onlyApplyOnEnter = onlyApplyOnEnter;
 		this->changeFunc = changeFunc;
 		this->disableIfGameLoaded = disableIfGameLoaded;
+	}
+};
+
+// Value is float in here
+struct CCFOSlider : CCFO
+{
+	ChangeFuncFloat changeFunc;
+	float min;
+	float max;
+
+	CCFOSlider() {};
+	CCFOSlider(float* value, const char* saveCat, const char* save, float min, float max, ChangeFuncFloat changeFunc = nil){
+		this->value = value;
+		this->saveCat = saveCat;
+		this->save = save;
+		this->changeFunc = changeFunc;
+		this->min = min;
+		this->max = max;
 	}
 };
 
@@ -462,6 +506,7 @@ struct CMenuScreenCustom
 				CCFO *m_CFO; // for initializing
 				CCFOSelect *m_CFOSelect;
 				CCFODynamic *m_CFODynamic;
+				CCFOSlider *m_CFOSlider;
 			};
 			int32 m_SaveSlot; // eSaveSlot
 			int32 m_TargetMenu; // eMenuScreen
@@ -677,6 +722,10 @@ public:
 	int8 m_nDisplayMSAALevel;
 #endif
 
+#ifdef MISSION_REPLAY
+	bool m_bAttemptingMissionRetry;
+#endif
+
 #ifdef GAMEPAD_MENU
 	enum
 	{
@@ -685,6 +734,7 @@ public:
 		CONTROLLER_DUALSHOCK4,
 		CONTROLLER_XBOX360,
 		CONTROLLER_XBOXONE,
+		CONTROLLER_NINTENDO_SWITCH,
 	};
 
 	int8 m_PrefsControllerType;
@@ -700,6 +750,7 @@ public:
 		LANGUAGE_POLISH,
 		LANGUAGE_RUSSIAN,
 		LANGUAGE_JAPANESE,
+		LANGUAGE_CHINESE,
 #endif
 	};
 	bool GetIsMenuActive() {return !!m_bMenuActive;}
@@ -735,7 +786,7 @@ public:
 
 #ifdef XBOX_MESSAGE_SCREEN
 	static uint32 m_nDialogHideTimer;
-	static PauseModeTime m_nDialogHideTimerPauseMode;
+	static uint32 m_nDialogHideTimerPauseMode;
 	static bool m_bDialogOpen;
 	static wchar *m_pDialogText;
 	static bool m_bSaveWasSuccessful;
@@ -759,13 +810,21 @@ public:
 	void DisplayHelperText(char*);
 	int DisplaySlider(float, float, float, float, float, float, float);
 	void DoSettingsBeforeStartingAGame();
+	// 绘制开始菜单
 	void DrawStandardMenus(bool);
+	//绘制控制器绑定
 	void DrawControllerBound(int32, int32, int32, int8);
+	//绘制控制器屏幕额外文本
 	void DrawControllerScreenExtraText(int, int, int);
+	//绘制控制器设置界面
 	void DrawControllerSetupScreen();
+	// 绘制退出界面
 	void DrawQuitGameScreen();
+	//绘制前景
 	void DrawFrontEnd();
+	//绘制背景
 	void DrawBackground(bool transitionCall);
+	//绘制玩家设置界面
 	void DrawPlayerSetupScreen(bool);
 	int FadeIn(int alpha);
 	int GetStartOptionsCntrlConfigScreens();

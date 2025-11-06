@@ -44,10 +44,12 @@
 #include "Camera.h"
 #include "MBlur.h"
 #include "ControllerConfig.h"
+#include "CarCtrl.h"
+#include "Population.h"
+#include "IniFile.h"
+#include "Zones.h"
 
-#ifdef DETECT_JOYSTICK_MENU
 #include "crossplatform.h"
-#endif
 
 #ifndef _WIN32
 #include "assert.h"
@@ -122,15 +124,26 @@ void LangJapSelect(int8 action)
 		FrontEndMenuManager.SaveSettings();
 	}
 }
+void
+LangchaSelect(int8 action)
+{
+	if(action == FEOPTION_ACTION_SELECT) {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_CHINESE;
+		FrontEndMenuManager.m_bFrontEnd_ReloadObrTxtGxt = true;
+		FrontEndMenuManager.InitialiseChangedLanguageSettings();
+		FrontEndMenuManager.SaveSettings();
+	}
+}
 #endif
 
 void
 CustomFrontendOptionsPopulate(void)
 {
-	// Moved to an array in MenuScreensCustom.cpp, but APIs are still available. see frontendoption.h
-
+	// Most of custom options are done statically in MenuScreensCustom.cpp, we add them here only if they're dependent to extra files
+	//大多数自定义选项都在 MenuScreensCustom.cpp 中静态完成，只有当它们依赖于额外文件时，我们才将其添加到此处
 	int fd;
 	// These work only if we have neo folder, so they're dynamically added
+	// 只有当我们有 neo 文件夹时，这些才会起作用，因此它们是动态添加的
 #ifdef EXTENDED_PIPELINES
 	const char *vehPipelineNames[] = { "FED_MFX", "FED_NEO" };
 	const char *off_on[] = { "FEM_OFF", "FEM_ON" };
@@ -153,6 +166,7 @@ CustomFrontendOptionsPopulate(void)
 	}
 #endif
 	// Add outsourced language translations, if files are found
+	// 如果找到文件，添加外包语言翻译
 #ifdef MORE_LANGUAGES
 	int fd2;
 	FrontendOptionSetCursor(MENUPAGE_LANGUAGE_SETTINGS, 5, false);
@@ -174,6 +188,14 @@ CustomFrontendOptionsPopulate(void)
 		CFileMgr::CloseFile(fd);
 	}
 
+	if(fd = CFileMgr::OpenFile("text/chinese.gxt")) {
+		if(fd2 = CFileMgr::OpenFile("models/chinese.txd")) {
+			FrontendOptionAddDynamic("FEL_CHS", 0, 0, MENUALIGN_CENTER, nil, nil, LangchaSelect, nil, nil);
+			CFileMgr::CloseFile(fd2);
+		}
+		CFileMgr::CloseFile(fd);
+	}
+
 #if 0
 	if (fd = CFileMgr::OpenFile("text/japanese.gxt")) {
 		if (fd2 = CFileMgr::OpenFile("models/fonts_j.txd")) {
@@ -189,16 +211,29 @@ CustomFrontendOptionsPopulate(void)
 #endif
 
 #ifdef LOAD_INI_SETTINGS
-#include "ini_parser.hpp"
+#define MINI_CASE_SENSITIVE
+#include "ini.h"
 
-linb::ini cfg;
+mINI::INIFile ini("reVC.ini");
+mINI::INIStructure cfg;
+
 bool ReadIniIfExists(const char *cat, const char *key, uint32 *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtoul(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtoul(section.get(key).c_str(), &endPtr, 0);
+		return true;
+	}
+	return false;
+}
+
+bool ReadIniIfExists(const char *cat, const char *key, uint8 *out)
+{
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtoul(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -206,11 +241,10 @@ bool ReadIniIfExists(const char *cat, const char *key, uint32 *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, bool *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtoul(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtoul(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -218,11 +252,10 @@ bool ReadIniIfExists(const char *cat, const char *key, bool *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, int32 *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtol(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtol(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -230,11 +263,10 @@ bool ReadIniIfExists(const char *cat, const char *key, int32 *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, int8 *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtol(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtol(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -242,10 +274,10 @@ bool ReadIniIfExists(const char *cat, const char *key, int8 *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, float *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	if (value && value[0] != '\xBA') {
-		*out = atof(value);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtof(section.get(key).c_str(), &endPtr);
 		return true;
 	}
 	return false;
@@ -253,10 +285,10 @@ bool ReadIniIfExists(const char *cat, const char *key, float *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, char *out, int size)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	if (value && value[0] != '\xBA') {
-		strncpy(out, value, size);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		strncpy(out, section.get(key).c_str(), size - 1);
+		out[size - 1] = '\0';
 		return true;
 	}
 	return false;
@@ -264,42 +296,42 @@ bool ReadIniIfExists(const char *cat, const char *key, char *out, int size)
 
 void StoreIni(const char *cat, const char *key, uint32 val)
 {
-	char temp[10];
-sprintf(temp, "%u", val);
-	cfg.set(cat, key, temp);
+	char temp[11];
+	sprintf(temp, "%u", val);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, uint8 val)
 {
-	char temp[10];
-	sprintf(temp, "%u", (uint32)val);
-	cfg.set(cat, key, temp);
+	char temp[11];
+	sprintf(temp, "%u", val);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, int32 val)
 {
-	char temp[10];
+	char temp[11];
 	sprintf(temp, "%d", val);
-	cfg.set(cat, key, temp);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, int8 val)
 {
-	char temp[10];
-	sprintf(temp, "%d", (int32)val);
-	cfg.set(cat, key, temp);
+	char temp[11];
+	sprintf(temp, "%d", val);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, float val)
 {
-	char temp[10];
+	char temp[50];
 	sprintf(temp, "%f", val);
-	cfg.set(cat, key, temp);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, char *val, int size)
 {
-	cfg.set(cat, key, val);
+	cfg[cat][key] = val;
 }
 
 const char *iniControllerActions[] = { "PED_FIREWEAPON", "PED_CYCLE_WEAPON_RIGHT", "PED_CYCLE_WEAPON_LEFT", "GO_FORWARD", "GO_BACK", "GO_LEFT", "GO_RIGHT", "PED_SNIPER_ZOOM_IN",
@@ -361,7 +393,7 @@ void LoadINIControllerSettings()
 #endif
 	// force to default GTA behaviour (never overwrite bindings on joy change/initialization) if user init'ed/set bindings before we introduced that
 	if (!ReadIniIfExists("Controller", "PadButtonsInited", &ControlsManager.ms_padButtonsInited)) {
-		ControlsManager.ms_padButtonsInited = cfg.category_size("Bindings") != 0 ? 16 : 0;
+		ControlsManager.ms_padButtonsInited = cfg.get("Bindings").size() != 0 ? 16 : 0;
 	}
 
 	for (int32 i = 0; i < MAX_CONTROLLERACTIONS; i++) {
@@ -463,12 +495,13 @@ void SaveINIControllerSettings()
 #endif
 #endif
 	StoreIni("Controller", "PadButtonsInited", ControlsManager.ms_padButtonsInited);
-	cfg.write_file("reVC.ini");
+
+	ini.write(cfg);
 }
 
 bool LoadINISettings()
 {
-	if (!cfg.load_file("reVC.ini"))
+	if (!ini.read(cfg))
 		return false;
 
 #ifdef IMPROVED_VIDEOMODE
@@ -477,6 +510,7 @@ bool LoadINISettings()
 	ReadIniIfExists("VideoMode", "Depth", &FrontEndMenuManager.m_nPrefsDepth);
 	ReadIniIfExists("VideoMode", "Subsystem", &FrontEndMenuManager.m_nPrefsSubsystem);
 	// Windowed mode is loaded below in CUSTOM_FRONTEND_OPTIONS section
+	//窗口模式在下面的 CUSTOM_FRONTEND_OPTIONS 部分中加载
 #else
 	ReadIniIfExists("Graphics", "VideoMode", &FrontEndMenuManager.m_nDisplayVideoMode);
 #endif
@@ -489,8 +523,10 @@ bool LoadINISettings()
 	ReadIniIfExists("Audio", "MusicVolume", &FrontEndMenuManager.m_PrefsMusicVolume);
 	ReadIniIfExists("Audio", "MP3BoostVolume", &FrontEndMenuManager.m_PrefsMP3BoostVolume);
 	ReadIniIfExists("Audio", "Radio", &FrontEndMenuManager.m_PrefsRadioStation);
+#ifdef EXTERNAL_3D_SOUND
 	ReadIniIfExists("Audio", "SpeakerType", &FrontEndMenuManager.m_PrefsSpeakers);
 	ReadIniIfExists("Audio", "Provider", &FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+#endif
 	ReadIniIfExists("Audio", "DynamicAcoustics", &FrontEndMenuManager.m_PrefsDMA);
 	ReadIniIfExists("Display", "Brightness", &FrontEndMenuManager.m_PrefsBrightness);
 	ReadIniIfExists("Display", "DrawDistance", &FrontEndMenuManager.m_PrefsLOD);
@@ -540,7 +576,7 @@ bool LoadINISettings()
 #endif
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
-	bool migrate = cfg.category_size("FrontendOptions") != 0;
+	bool migrate = cfg.get("FrontendOptions").size() != 0;
 	for (int i = 0; i < MENUPAGES; i++) {
 		for (int j = 0; j < NUM_MENUROWS; j++) {
 			CMenuScreenCustom::CMenuEntry &option = aScreens[i].m_aEntries[j];
@@ -549,20 +585,28 @@ bool LoadINISettings()
 				
 			// CFO check
 			if (option.m_Action < MENUACTION_NOTHING && option.m_CFO->save) {
-				// CFO only supports saving uint8 right now
-
 				// Migrate from old .ini to new .ini
-				if (migrate && ReadIniIfExists("FrontendOptions", option.m_CFO->save, option.m_CFO->value))
-					cfg.remove("FrontendOptions", option.m_CFO->save);
+				// Old values can only be int8, new ones can contain float if it is slider
+				if (migrate && ReadIniIfExists("FrontendOptions", option.m_CFO->save, (int8*)option.m_CFO->value))
+					cfg["FrontendOptions"].remove(option.m_CFO->save);
+				else if (option.m_Action == MENUACTION_CFO_SLIDER)
+					ReadIniIfExists(option.m_CFO->saveCat, option.m_CFO->save, (float*)option.m_CFO->value);
 				else
-					ReadIniIfExists(option.m_CFO->saveCat, option.m_CFO->save, option.m_CFO->value);
+					ReadIniIfExists(option.m_CFO->saveCat, option.m_CFO->save, (int8*)option.m_CFO->value);
 
 				if (option.m_Action == MENUACTION_CFO_SELECT) {
-					option.m_CFOSelect->lastSavedValue = option.m_CFOSelect->displayedValue = *option.m_CFO->value;
+					option.m_CFOSelect->lastSavedValue = option.m_CFOSelect->displayedValue = *(int8*)option.m_CFO->value;
 				}
 			}
 		}
 	}
+#endif
+
+	// Fetched in above block, but needs evaluation
+#ifdef PED_CAR_DENSITY_SLIDERS
+	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * CIniFile::PedNumberMultiplier;
+	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * CIniFile::PedNumberMultiplier;
+	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * CIniFile::CarNumberMultiplier;
 #endif
 
 	return true;
@@ -576,6 +620,7 @@ void SaveINISettings()
 	StoreIni("VideoMode", "Depth", FrontEndMenuManager.m_nPrefsDepth);
 	StoreIni("VideoMode", "Subsystem", FrontEndMenuManager.m_nPrefsSubsystem);
 	// Windowed mode is loaded below in CUSTOM_FRONTEND_OPTIONS section
+	//窗口模式在下面的 CUSTOM_FRONTEND_OPTIONS 部分中加载
 #else
 	StoreIni("Graphics", "VideoMode", FrontEndMenuManager.m_nDisplayVideoMode);
 #endif
@@ -588,8 +633,10 @@ void SaveINISettings()
 	StoreIni("Audio", "MusicVolume", FrontEndMenuManager.m_PrefsMusicVolume);
 	StoreIni("Audio", "MP3BoostVolume", FrontEndMenuManager.m_PrefsMP3BoostVolume);
 	StoreIni("Audio", "Radio", FrontEndMenuManager.m_PrefsRadioStation);
+#ifdef EXTERNAL_3D_SOUND
 	StoreIni("Audio", "SpeakerType", FrontEndMenuManager.m_PrefsSpeakers);
 	StoreIni("Audio", "Provider", FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+#endif
 	StoreIni("Audio", "DynamicAcoustics", FrontEndMenuManager.m_PrefsDMA);
 	StoreIni("Display", "Brightness", FrontEndMenuManager.m_PrefsBrightness);
 	StoreIni("Display", "DrawDistance", FrontEndMenuManager.m_PrefsLOD);
@@ -645,14 +692,16 @@ void SaveINISettings()
 				break;
 				
 			if (option.m_Action < MENUACTION_NOTHING && option.m_CFO->save) {
-				// Beware: CFO only supports saving uint8 right now
-				StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *option.m_CFO->value);
+				if (option.m_Action == MENUACTION_CFO_SLIDER)
+					StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *(float*)option.m_CFO->value);
+				else
+					StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *(int8*)option.m_CFO->value);
 			}
 		}
 	}
 #endif
 
-	cfg.write_file("reVC.ini");
+	ini.write(cfg);
 }
 
 #endif
@@ -749,12 +798,14 @@ FixCar(void)
 static void
 TeleportToWaypoint(void)
 {
-	if (FindPlayerVehicle()) {
-		if (CRadar::TargetMarkerId != -1)
-			FindPlayerVehicle()->Teleport(CRadar::TargetMarkerPos + CVector(0.0f, 0.0f, FindPlayerVehicle()->GetColModel()->boundingSphere.center.z));
-	} else
-		if(CRadar::TargetMarkerId != -1)
-			FindPlayerPed()->Teleport(CRadar::TargetMarkerPos + CVector(0.0f, 0.0f, FEET_OFFSET));
+	if (CRadar::TargetMarkerId == -1)
+		return;
+	CEntity* pEntityToTeleport = FindPlayerEntity();
+	CVector vNewPos = CRadar::TargetMarkerPos;
+	CStreaming::LoadScene(vNewPos);
+	CStreaming::LoadSceneCollision(vNewPos);
+	vNewPos.z = CWorld::FindGroundZForCoord(vNewPos.x, vNewPos.y) + pEntityToTeleport->GetDistanceFromCentreOfMassToBaseOfModel();
+	pEntityToTeleport->Teleport(vNewPos);
 }
 #endif
 
@@ -877,6 +928,14 @@ switchWeather(void)
 }
 
 void
+MyTest1()
+{
+	wchar *s = (wchar*)L"~n~ tanka";
+	CHud::SetHelpMessage(s, true);
+	SpawnCar(MI_RHINO);
+}
+
+void
 DebugMenuPopulate(void)
 {
 	if(1){
@@ -904,6 +963,9 @@ DebugMenuPopulate(void)
 			"18", "19", "20", "21", "22", "23", "24"
 		};
 		DebugMenuEntry *e;
+
+		DebugMenuAddCmd("MyTest", "BUutton1", MyTest1);
+
 		e = DebugMenuAddVar("Time & Weather", "Current Hour", &CClock::GetHoursRef(), nil, 1, 0, 23, nil);
 		DebugMenuEntrySetWrap(e, true);
 		e = DebugMenuAddVar("Time & Weather", "Current Minute", &CClock::GetMinutesRef(),
@@ -1037,6 +1099,12 @@ extern bool gbRenderWorld2;
 #ifndef MASTER
 		DebugMenuAddVarBool8("Render", "Occlusion debug", &bDispayOccDebugStuff, nil);
 #endif
+#ifdef LIBRW
+		//改
+		//DebugMenuAddVarBool32("Render", "MatFX env map apply light", &rw::MatFX::envMapApplyLight, nil);
+		//DebugMenuAddVarBool32("Render", "MatFX env map flip U", &rw::MatFX::envMapFlipU, nil);
+		//DebugMenuAddVarBool32("Render", "MatFX env map use matcolor", &rw::MatFX::envMapUseMatColor, nil);
+#endif
 #ifdef EXTENDED_PIPELINES
 		static const char *vehpipenames[] = { "MatFX", "Neo" };
 		e = DebugMenuAddVar("Render", "Vehicle Pipeline", &CustomPipes::VehiclePipeSwitch, nil,
@@ -1137,6 +1205,10 @@ extern bool gbRenderWorld2;
 		DebugMenuAddVar("Cam", "Cam Mode", &DebugCamMode, nil, 1, 0, CCam::MODE_EDITOR, nil);
 		DebugMenuAddCmd("Cam", "Normal", []() { DebugCamMode = 0; });
 		DebugMenuAddCmd("Cam", "Reset Statics", ResetCamStatics);
+
+
+		
+
 
 		CTweakVars::AddDBG("Debug");
 	}
@@ -1242,7 +1314,9 @@ void re3_trace(const char *filename, unsigned int lineno, const char *func, cons
 
 	OutputDebugString(buff);
 }
+#endif
 
+#ifndef MASTER
 void re3_usererror(const char *format, ...)
 {
 	va_list va;

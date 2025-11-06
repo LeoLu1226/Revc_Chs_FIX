@@ -1,4 +1,4 @@
-#include "common.h"
+﻿#include "common.h"
 
 #include "FileMgr.h"
 #ifdef MORE_LANGUAGES
@@ -13,6 +13,10 @@ wchar WideErrorString[25];
 
 CText TheText;
 
+//在游戏里面重新选择语言后可能不会重新加载任务文本
+char Mission_TableName_backup[64]{0};
+
+
 CText::CText(void)
 {
 	encoding = 'e';
@@ -20,6 +24,9 @@ CText::CText(void)
 	bIsMissionTextLoaded = false;
 	memset(szMissionTableName, 0, sizeof(szMissionTableName));
 	memset(WideErrorString, 0, sizeof(WideErrorString));
+	//memset(Mission_TableName_backup, 0, 64);
+	//strset(Mission_TableName_backup, 0);
+	
 }
 
 void
@@ -62,6 +69,9 @@ CText::Load(void)
 		break;
 	case CMenuManager::LANGUAGE_JAPANESE:
 		sprintf(filename, "JAPANESE.GXT");
+		break;
+	case CMenuManager::LANGUAGE_CHINESE:
+		sprintf(filename, "CHINESE.GXT");
 		break;
 #endif
 	}
@@ -216,12 +226,15 @@ CText::ReadChunkHeader(ChunkHeader *buf, int32 file, size_t *offset)
 #endif
 }
 
+
 void
 CText::LoadMissionText(char *MissionTableName)
 {
 	char filename[32];
 	CMessages::ClearAllMessagesDisplayedByGame();
-
+	//处理一个疑似bug 重新加载语言不会重新加载任务文本
+	strcpy(Mission_TableName_backup, MissionTableName);
+	
 	mission_keyArray.Unload();
 	mission_data.Unload();
 
@@ -267,6 +280,9 @@ CText::LoadMissionText(char *MissionTableName)
 	case CMenuManager::LANGUAGE_JAPANESE:
 		sprintf(filename, "JAPANESE.GXT");
 		break;
+	case CMenuManager::LANGUAGE_CHINESE: 
+		sprintf(filename, "CHINESE.GXT"); 
+		break;
 #endif
 	}
 	CTimer::Suspend();
@@ -303,6 +319,13 @@ CText::LoadMissionText(char *MissionTableName)
 	CFileMgr::SetDir("");
 	strcpy(szMissionTableName, MissionTableName);
 	bIsMissionTextLoaded = true;
+}
+
+const char *
+CText::GetMissiontTableName(void)
+{
+	
+	return Mission_TableName_backup;
 }
 
 
