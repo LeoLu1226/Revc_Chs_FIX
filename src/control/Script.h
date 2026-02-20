@@ -374,8 +374,10 @@ public:
 	int8 ProcessCommands1200To1299(int32);
 	int8 ProcessCommands1300To1399(int32);
 	int8 ProcessCommands1400To1499(int32);
+
 	//cleo
 	int8 ProcessCleoScripts(int32);
+	
 
 	// 定位玩家
 	void LocatePlayerCommand(int32, uint32 *); 
@@ -547,8 +549,13 @@ public:
 	static void Init();
 	static void Process(); // 处理脚本
 
+	//CLEO
 	static void LoadCustomScripts();
+	static void UnLoadCustomScripts();
 	static void LoadCustomScriptsFxt();
+	static void DisableCLEOScripts();
+	static void EnableCLEOScripts();
+	//static void UnLoadCustomScriptsFxt();
 
 	 // 启动测试脚本
 	static CRunningScript *StartTestScript();

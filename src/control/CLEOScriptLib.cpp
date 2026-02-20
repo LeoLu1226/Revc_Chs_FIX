@@ -54,6 +54,7 @@ struct ScriptInfo {
 
 	// CRunningScript *sc = 0;
 	int filesize = 0;
+	int32 filehash = 0;
 };
 std::vector<ScriptInfo> CusomScripts; // 存储所有添加的脚本
 std::map<std::string, std::wstring> ScriptsFxt;
@@ -195,10 +196,15 @@ CTheScripts::LoadCustomScriptsFxt()
 		}
 	}
 }
+
 // 自定义cleo加载
 void
 CTheScripts::LoadCustomScripts()
 {
+
+	//UnLoadCustomScripts();
+
+
 	namespace fs = std::filesystem;
 	std::string scriptDir = "CLEO";
 
@@ -221,7 +227,20 @@ CTheScripts::LoadCustomScripts()
 				// 读取全部内容
 				std::vector<uint8> buffer(fileSize);
 				file.read(reinterpret_cast<char *>(buffer.data()), fileSize);
+				int32 hash = 0;
+				for (auto bf : buffer)
+				 hash += bf;
 
+				for (auto ss : CusomScripts)
+				{
+					if (ss.filehash == hash && ss.filesize == fileSize && strcmp(ss.sc->m_bScriptFileName,entry.path().stem().string().c_str())==0)
+					{
+						hash = 0;
+						break;
+					}
+				}
+
+				
 				uint32 adderss = 0;
 
 				// this->m_dwBaseIp = (unsigned int)this->m_pCodeData - (unsigned int)game.Scripts.Space;
@@ -246,6 +265,7 @@ CTheScripts::LoadCustomScripts()
 				ScriptInfo sca;
 				sca.sc = scrip;
 				sca.filesize = fileSize;
+				sca.filehash = hash;
 				// 添加到记录列表
 				CusomScripts.push_back(sca);
 				// 添加到激活脚本列表
@@ -256,6 +276,100 @@ CTheScripts::LoadCustomScripts()
 	// 加载fxt文本
 	LoadCustomScriptsFxt();
 }
+
+void
+CTheScripts::UnLoadCustomScripts()
+{
+	// 先清理上一次加载的自定义脚本及其在 ScriptSpace 中占用的字节
+	if(!CusomScripts.empty()) {
+		auto &space = CTheScripts::ScriptSpace;
+
+		// 计算最小 base、最大全局结束偏移和总大小
+		uint32_t minBase = 0xFFFFFFFFu;
+		uint32_t maxEnd = 0;
+		size_t totalSize = 0;
+		for(const auto &info : CusomScripts) {
+			uint32_t b = info.sc->base_nIp;
+			uint32_t e = b + static_cast<uint32_t>(info.filesize);
+			if(b < minBase) minBase = b;
+			if(e > maxEnd) maxEnd = e;
+			totalSize += info.filesize;
+		}
+
+		// 如果所有自定义脚本位于 ScriptSpace 末尾且连续，可以一次性缩减
+		if(maxEnd <= space.size() && minBase != 0xFFFFFFFFu && minBase + totalSize == space.size()) {
+			for(auto &info : CusomScripts) {
+				if(info.sc) info.sc->RemoveScriptFromList(&CTheScripts::pActiveScripts);
+			}
+			space.resize(space.size() - totalSize);
+			CusomScripts.clear();
+		} else if(maxEnd <= space.size()) {
+			// 通用路径：按 base_nIp 降序删除区间，并在每次删除后修正其余脚本的 IP
+			std::vector<ScriptInfo *> vec;
+			vec.reserve(CusomScripts.size());
+			for(auto &info : CusomScripts) vec.push_back(&info);
+
+			std::sort(vec.begin(), vec.end(), [](const ScriptInfo *a, const ScriptInfo *b) { return a->sc->base_nIp > b->sc->base_nIp; });
+
+			for(const ScriptInfo *pInfo : vec) {
+				const ScriptInfo &info = *pInfo;
+				uint32_t pos = info.sc->base_nIp;
+				uint32_t len = static_cast<uint32_t>(info.filesize);
+
+				if(pos >= space.size()) {
+					// 超界：只从活动列表移除并跳过擦除
+					if(info.sc) info.sc->RemoveScriptFromList(&CTheScripts::pActiveScripts);
+					continue;
+				}
+				if(pos + len > space.size()) len = static_cast<uint32_t>(space.size() - pos);
+
+				// 从激活列表移除该脚本
+				if(info.sc) info.sc->RemoveScriptFromList(&CTheScripts::pActiveScripts);
+
+				// 擦除 ScriptSpace 中对应字节
+				space.erase(space.begin() + pos, space.begin() + pos + len);
+
+				// 修正所有运行脚本（活动链表）中受影响的 IP/基址
+				for(CRunningScript *rs = CTheScripts::pActiveScripts; rs; rs = rs->next) {
+					if(rs->base_nIp > pos) rs->base_nIp -= len;
+					if(rs->m_nIp > pos) rs->m_nIp -= len;
+				}
+
+				// 修正 CusomScripts 中尚未处理脚本的 base_nIp（因为我们按降序处理，大多数会被跳过或已处理）
+				for(auto &other : CusomScripts) {
+					if(other.sc.get() == info.sc.get()) continue;
+					if(other.sc->base_nIp > pos) other.sc->base_nIp -= len;
+				}
+			}
+
+			CusomScripts.clear();
+		} else {
+			// 极端情况：ScriptSpace 小于记录的结束位置，安全地仅从激活列表移除并清空记录
+			for(auto &info : CusomScripts) {
+				if(info.sc) info.sc->RemoveScriptFromList(&CTheScripts::pActiveScripts);
+			}
+			CusomScripts.clear();
+		}
+	}
+}
+
+void
+CTheScripts::DisableCLEOScripts()
+{
+	for(auto ss : CusomScripts) 
+	{
+		if(ss.sc) ss.sc->RemoveScriptFromList(&CTheScripts::pActiveScripts);
+	
+	}
+}
+
+void CTheScripts::EnableCLEOScripts() 
+{
+	for(auto ss : CusomScripts) {
+		if(ss.sc) ss.sc->AddScriptToList(&CTheScripts::pActiveScripts);
+	}
+}
+
 
 #include <Windows.h>
 
@@ -597,6 +711,8 @@ CRunningScript::ProcessCleoScripts(int32 command)
 
 	return -1;
 }
+
+
 
 // ==================== 编码转换函数 ====================
 

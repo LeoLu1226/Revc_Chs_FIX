@@ -679,9 +679,9 @@ void CRunningScript::CollectParameters(uint32* pIp, int16 total)
 		break;
 		default:
 #ifdef VC_CLEO
-			*pIp -= 1;
-			ScriptParams[i] = (int32)& CTheScripts::ScriptSpace[*pIp];
-			*pIp += 8;
+			//*pIp -= 1;
+			//ScriptParams[i] = (int32)& CTheScripts::ScriptSpace[*pIp];
+			//*pIp += 8;
 			script_assert(0);
 #else
 			script_assert(0);

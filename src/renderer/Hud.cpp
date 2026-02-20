@@ -618,28 +618,9 @@ void CHud::Draw()
 					CFont::SetColor(HEALTH_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 						//绘制血量数字
-						//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						const float barWidth = SCREEN_SCALE_X(100.f / 2.f);
-						const float right = SCREEN_SCALE_FROM_RIGHT(98.0f + 14.0f); // SCREEN_SCALE_FROM_RIGHT(37.0f);
-						const float left = right - barWidth;
 						
-						const float barHeight = SCREEN_SCALE_Y(12.0f);
-						const float top = SCREEN_SCALE_Y(63.0f) + SCREEN_SCALE_Y(8.0f) + SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * 0);
-						const float bottom = top + barHeight;
-						float maxhp = playerPed->GetPlayerInfoForThisPlayerPed()->m_nMaxHealth;
-						float hp = playerPed->m_fHealth / maxhp * 100;
-
-						CSprite2d::DrawRect(CRect(left-5, top-5, right+5, bottom+5), CRGBA(0, 60, 0, 255));//底层
-						
-						// CSprite2d::DrawLine(CVector2D(rect.left - 1, rect.top - 1), CVector2D(rect.right + 1, rect.bottom+1),
-						// Details.backgroundColor);
-						CSprite2d::DrawRectNoFill(CRect(left - 6, top - 6, right + 6, bottom + 6),
-						                          CRGBA(10, 155,100, 255));
-						float idx=mapValue(hp, 0, 100, left, right);
-						CSprite2d::DrawRect(CRect(left, top, idx, bottom), HEALTH_COLOR);
-						// CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
-
 
 						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || FRAMECOUNTER & 4) {
 							// CFont::SetColor(HEALTH_COLOR);
@@ -670,20 +651,8 @@ void CHud::Draw()
 					CFont::SetColor(ARMOUR_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 
-						//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f+20.0f), SCREEN_SCALE_Y(65.0f), sPrint);
-						const float barWidth = SCREEN_SCALE_X(100.f / 2.f);
-						const float right = SCREEN_SCALE_FROM_RIGHT(190.0f + 14.0f); // SCREEN_SCALE_FROM_RIGHT(37.0f);
-						const float left = right - barWidth;
-
-						const float barHeight = SCREEN_SCALE_Y(12.0f);
-						const float top = SCREEN_SCALE_Y(63.0f) + SCREEN_SCALE_Y(8.0f) + SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * 0);
-						const float bottom = top + barHeight;
-						float maxArmour = playerPed->GetPlayerInfoForThisPlayerPed()->m_nMaxArmour;
-						float Armour = playerPed->m_fArmour / maxArmour * 100;
-						CSprite2d::DrawRect(CRect(left - 5, top - 5, right + 5, bottom + 5), CRGBA(0, 60, 0, 255)); // 底层
-						float idx = mapValue(Armour, 0, 100, left, right);
-						CSprite2d::DrawRect(CRect(left, top, idx, bottom), ARMOUR_COLOR);
-
+						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f+20.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						
 
 						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
 							// CFont::SetColor(ARMOUR_COLOR);

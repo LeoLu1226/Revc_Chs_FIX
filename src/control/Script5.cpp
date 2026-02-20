@@ -1,4 +1,4 @@
-#include "common.h"
+﻿#include "common.h"
 
 #include "Script.h"
 #include "ScriptCommands.h"
@@ -2105,7 +2105,10 @@ void CTheScripts::RenderTheScriptDebugLines()
 
 void CTheScripts::SaveAllScripts(uint8* buf, uint32* size)
 {
-INITSAVEBUF
+	// 禁用cleo脚本，防止在保存过程中有脚本被创建或销毁
+	DisableCLEOScripts();
+
+	INITSAVEBUF
 	uint32 varSpace = GetSizeOfVariableSpace();
 	uint32 runningScripts = 0;
 	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
@@ -2181,6 +2184,8 @@ INITSAVEBUF
 	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
 		pScript->Save(buf);
 VALIDATESAVEBUF(*size)
+	// 启用cleo脚本
+	EnableCLEOScripts();
 }
 
 void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)
