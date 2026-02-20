@@ -456,37 +456,21 @@ enum {
 #ifdef PS2
 	SIZE_MAIN_SCRIPT = 205512,
 #else
-#ifdef VC_BMP
-	SIZE_MAIN_SCRIPT = 387364, // 大任务包测试500000
-#else
-	SIZE_MAIN_SCRIPT = 225512, // 原版
-#endif // VC_BMP
 
-	
+	SIZE_MAIN_SCRIPT = 225512, // 原版
+
 #endif
-#ifdef VC_BMP
-	SIZE_MISSION_SCRIPT = 70940, // 大任务包测试35000->400000
-#else
+
 	SIZE_MISSION_SCRIPT = 35000, // 大任务包测试35000->400000
-#endif                                // VC_BMP
+                                // VC_BMP
 	
 	SIZE_SCRIPT_SPACE = SIZE_MAIN_SCRIPT + SIZE_MISSION_SCRIPT
 };
-#ifdef VC_CLEO
 
-#ifdef VC_BMP
-const int sc_size = 256;
-#else
-const int sc_size = 128;
-#endif // VC_BMP
-
-#else
-const int sc_size = 128;
-#endif // VC_CLEO
 
 enum {
 
-	MAX_NUM_SCRIPTS = sc_size,
+	MAX_NUM_SCRIPTS = 128,
 
 
 	MAX_NUM_INTRO_TEXT_LINES = 48,
@@ -494,11 +478,7 @@ enum {
 	MAX_NUM_SCRIPT_SRPITES = 16,
 	MAX_NUM_SCRIPT_SPHERES = 16,
 	MAX_NUM_USED_OBJECTS = 220,
-#ifdef VC_BMP //任务脚本数量
 	MAX_NUM_MISSION_SCRIPTS = 120,
-#else
-	MAX_NUM_MISSION_SCRIPTS = 120,
-#endif // VC_BMP
 	
 	MAX_NUM_BUILDING_SWAPS = 25,
 	MAX_NUM_INVISIBILITY_SETTINGS = 20,
