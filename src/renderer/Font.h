@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Sprite2d.h"
 
@@ -10,23 +10,23 @@ void UnicodeMakeUpperCase(wchar *dst, const wchar *src);
 
 struct CFontDetails
 {
-	CRGBA color;//ÑÕÉ«
-	float scaleX;//Ëõ·ÅX
-	float scaleY;//Ëõ·ÅY
-	float slant;//ÇãĞ±
-	float slantRefX;//ÇãĞ±x
-	float slantRefY;//ÇãĞ±y
-	bool8 justify;//ÎÄ±¾¶ÔÆä
-	bool8 centre;//¾ÓÖĞ ?ÖĞĞÄ?
-	bool8 rightJustify;//ÓÒ¶ÔÆë
-	bool8 background;//±³¾°
-	bool8 backgroundOnlyText;//½ö±³¾°ÎÄ±¾
-	bool8 proportional;// ±ÈÀı?
-	bool8 bIsShadow;//ÊÇ·ñÏÔÊ¾ÒõÓ°?
+	CRGBA color;//é¢œè‰²
+	float scaleX;//ç¼©æ”¾X
+	float scaleY;//ç¼©æ”¾Y
+	float slant;//å€¾æ–œ
+	float slantRefX;//å€¾æ–œx
+	float slantRefY;//å€¾æ–œy
+	bool8 justify;//æ–‡æœ¬å¯¹å…¶
+	bool8 centre;//å±…ä¸­ ?ä¸­å¿ƒ?
+	bool8 rightJustify;//å³å¯¹é½
+	bool8 background;//èƒŒæ™¯
+	bool8 backgroundOnlyText;//ä»…èƒŒæ™¯æ–‡æœ¬
+	bool8 proportional;// æ¯”ä¾‹?
+	bool8 bIsShadow;//æ˜¯å¦æ˜¾ç¤ºé˜´å½±?
 	bool8 bFlash;
 	bool8 bBold;
 	float alphaFade;
-	CRGBA backgroundColor;//±³¾°ÑÕÉ«
+	CRGBA backgroundColor;//èƒŒæ™¯é¢œè‰²
 	float wrapX;
 	float centreSize;
 	float rightJustifyWrap;
@@ -136,6 +136,7 @@ class CFont
 	static int16 Size[LANGSET_MAX][MAX_FONTS][210];
 	static uint8 LanguageSet;
 	static int32 Slot;
+	static int32 chs_Slot;
 #else
 	static int16 Size[MAX_FONTS][210];
 #endif

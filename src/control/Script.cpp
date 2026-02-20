@@ -1,4 +1,4 @@
-#include "common.h"
+﻿#include "common.h"
 
 #include "Script.h"
 #include "ScriptCommands.h"
@@ -52,8 +52,18 @@
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 #include <stdarg.h>
 #endif
+#include <filesystem>
+#include <vector>
+#include <string>
+#include <memory>
 
+#ifndef VC_CLEO
 uint8 CTheScripts::ScriptSpace[SIZE_SCRIPT_SPACE];
+#else
+std::vector<uint8> CTheScripts::ScriptSpace(SIZE_SCRIPT_SPACE);
+#endif // !VC_CLEO
+
+
 CRunningScript CTheScripts::ScriptsArray[MAX_NUM_SCRIPTS];
 intro_text_line CTheScripts::IntroTextLines[MAX_NUM_INTRO_TEXT_LINES];
 intro_script_rectangle CTheScripts::IntroRectangles[MAX_NUM_INTRO_RECTANGLES];
@@ -68,8 +78,8 @@ bool CTheScripts::DbgFlag;
 uint32 CTheScripts::OnAMissionFlag;
 int32 CTheScripts::StoreVehicleIndex;
 bool CTheScripts::StoreVehicleWasRandom;
-CRunningScript *CTheScripts::pIdleScripts;
-CRunningScript *CTheScripts::pActiveScripts;
+CRunningScript *CTheScripts::pIdleScripts; // 空闲脚本指针
+CRunningScript *CTheScripts::pActiveScripts; // 活动脚本指针
 int32 CTheScripts::NextFreeCollectiveIndex;
 int32 CTheScripts::LastRandomPedId;
 uint16 CTheScripts::NumberOfUsedObjects;
@@ -98,7 +108,8 @@ bool CTheScripts::bPlayerIsInTheStatium;
 int16 CTheScripts::CardStack[CARDS_IN_DECK * MAX_DECKS];
 int16 CTheScripts::CardStackPosition;
 #endif
-
+// 任务脚本文件列表实现cleo
+//std::vector<std::unique_ptr<CustomScript>> CTheScripts::s_CustomScripts;
 #ifdef MISSION_REPLAY
 
 static const char* nonMissionScripts[] = {
@@ -627,7 +638,11 @@ void CRunningScript::CollectParameters(uint32* pIp, int16 total)
 		case ARGUMENT_GLOBALVAR:
 			varIndex = CTheScripts::Read2BytesFromScript(pIp);
 			script_assert(varIndex >= 8 && varIndex < CTheScripts::GetSizeOfVariableSpace());
-			ScriptParams[i] = *((int32*)&CTheScripts::ScriptSpace[varIndex]);
+			
+
+			ScriptParams[i] = *((int32 *)&CTheScripts::ScriptSpace[varIndex]);
+
+
 			break;
 		case ARGUMENT_LOCALVAR:
 			varIndex = CTheScripts::Read2BytesFromScript(pIp);
@@ -640,8 +655,39 @@ void CRunningScript::CollectParameters(uint32* pIp, int16 total)
 		case ARGUMENT_INT16:
 			ScriptParams[i] = CTheScripts::Read2BytesFromScript(pIp);
 			break;
+#ifdef VC_CLEO
+		case PARAM_TYPE_STRING:
+		{
+			uint8 *var = &CTheScripts::ScriptSpace[*pIp-1];
+			bool processed = (*var & 0x80);
+			if (processed)
+			{
+				uint8 length = CTheScripts::Read1ByteFromScript(pIp);
+				memmove(&CTheScripts::ScriptSpace[*pIp], &CTheScripts::ScriptSpace[*pIp + 1], length);
+				CTheScripts::ScriptSpace[*pIp + length] = 0;
+				*var = *var | 0x80;
+
+			}
+			//ScriptParams[i] = CTheScripts::Read1ByteFromScript(pIp);
+			ScriptParams[i] = CTheScripts::Read4BytesFromScript(pIp);
+			*pIp -= 4;
+			*pIp += (strlen((char*) & CTheScripts::ScriptSpace[*pIp]) + 1);
+			
+		}
+	
+#endif // VC_CLEO
+		break;
 		default:
+#ifdef VC_CLEO
+			*pIp -= 1;
+			ScriptParams[i] = (int32)& CTheScripts::ScriptSpace[*pIp];
+			*pIp += 8;
 			script_assert(0);
+#else
+			script_assert(0);
+#endif // VC_CLEO
+
+			
 			break;
 		}
 	}
@@ -664,6 +710,22 @@ int32 CRunningScript::CollectNextParameterWithoutIncreasingPC(uint32 ip)
 		return CTheScripts::Read2BytesFromScript(pIp);
 	case ARGUMENT_FLOAT:
 		return CTheScripts::Read4BytesFromScript(pIp);
+#ifdef VC_CLEO
+	case PARAM_TYPE_STRING: 
+	{
+		uint8 *var = &CTheScripts::ScriptSpace[*pIp - 1];
+		bool processed = (*var & 0x80);
+		if(!processed) {
+			unsigned char length = *(unsigned char *)&CTheScripts::ScriptSpace[ip];
+			*std::copy_n(&CTheScripts::ScriptSpace[ip + 1], length, &CTheScripts::ScriptSpace[ip]) = 0;
+			// paramType->processed = trCTheScripts::ScriptSpaceue;
+			*var = *var | 0x80;
+		}
+	}
+		return (int)&CTheScripts::ScriptSpace[ip];
+	
+#endif // VC_CLEO
+
 	default:
 		script_assert(0);
 	}
@@ -697,6 +759,7 @@ int32 *CRunningScript::GetPointerToScriptVariable(uint32* pIp, int16 type)
 		script_assert(type == VAR_LOCAL);
 		return &m_anLocalVariables[CTheScripts::Read2BytesFromScript(pIp)];
 	default:
+
 		script_assert(0);
 	}
 	return nil;
@@ -763,7 +826,13 @@ void CTheScripts::Init()
 	CFileMgr::SetDir("data");
 	int mainf = CFileMgr::OpenFile("main.scm", "rb");
 #endif
-	CFileMgr::Read(mainf, (char*)ScriptSpace, SIZE_MAIN_SCRIPT);
+#ifndef VC_CLEO
+	CFileMgr::Read(mainf, (char *)ScriptSpace, SIZE_MAIN_SCRIPT);
+	#else
+	CFileMgr::Read(mainf, (char *)ScriptSpace.data(), SIZE_MAIN_SCRIPT);
+#endif // !VC_CLEO
+
+	
 	CFileMgr::CloseFile(mainf);
 	CFileMgr::SetDir("");
 	StoreVehicleIndex = -1;
@@ -829,6 +898,11 @@ void CTheScripts::Init()
 	UsingMobileScript = false;
 	AlreadySavedGame = false;
 #endif
+	//添加cleo初始化
+	//  =====  =====
+	//ProcessCustomScripts(); 
+	// ======================
+	LoadCustomScripts();
 }
 
 void CTheScripts::RemoveScriptTextureDictionary()
@@ -924,7 +998,8 @@ void CTheScripts::Process()
 			CPlayerPed* pPlayerPed = FindPlayerPed();
 			if (pPlayerPed) {
 				CPlayerInfo* pPlayerInfo = pPlayerPed->GetPlayerInfoForThisPlayerPed();
-				if (pPlayerInfo)
+				if (pPlayerInfo) 
+					//pPlayerPed->SetHealth(pPlayerInfo->m_nMaxHealth);
 					pPlayerPed->m_fHealth = pPlayerInfo->m_nMaxHealth;
 			}
 		}
@@ -1004,6 +1079,18 @@ void CRunningScript::Process()
 
 int8 CRunningScript::ProcessOneCommand()
 {
+#ifdef VC_CLEO
+	if(m_nIp > CTheScripts::ScriptSpace.size()) {
+
+		printf("CLEO_ERROR:IP>ScriptSize ScriptName%s", m_abScriptName);
+		return 0;
+	}
+
+	if(sctype == SCRIPT_TYPE_CUSTOM) printf("CLEO_RUN: ScriptName%s", m_abScriptName);
+#endif // VC_CLEO
+
+	
+
 	int8 retval = -1;
 	++CTheScripts::CommandsExecuted;
 	int32 command = (uint16)CTheScripts::Read2BytesFromScript(&m_nIp);
@@ -1042,6 +1129,14 @@ int8 CRunningScript::ProcessOneCommand()
 		retval = ProcessCommands1300To1399(command);
 	else if (command < 1500)
 		retval = ProcessCommands1400To1499(command);
+#ifdef VC_CLEO
+	else if(command < COMMAND_CLEO_END) {
+		retval = ProcessCleoScripts(command);
+	}
+#endif // VC_CLEO
+
+	
+
 #ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
 	if (!AlreadySavedGame) // we need to ignore first "fake" command which actually just saves the game
 #endif
@@ -1073,7 +1168,28 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		return 1;
 	case COMMAND_GOTO:
 		CollectParameters(&m_nIp, 1);
+#ifdef VC_CLEO
+		{
+			//int address = ScriptParams[0];
+			if(ScriptParams[0] >= 0)
+			{ 
+				SetIP(ScriptParams[0]);
+			} else {
+				if (sctype == SCRIPT_TYPE_CUSTOM)
+				{ 
+					SetIP(base_nIp - ScriptParams[0]);
+				} else {
+					SetIP(SIZE_MAIN_SCRIPT - ScriptParams[0]);
+				}
+
+			}
+		}
+		
+		#else
 		SetIP(ScriptParams[0] >= 0 ? ScriptParams[0] : SIZE_MAIN_SCRIPT - ScriptParams[0]);
+#endif // VC_CLEO
+
+		
 		/* Known issue: GOTO to 0. It might have been "better" to use > instead of >= */
 		/* simply because it never makes sense to jump to start of the script */
 		/* but jumping to start of a custom mission is an issue for simple mission-like scripts */
@@ -1538,7 +1654,22 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 	case COMMAND_GOTO_IF_FALSE:
 		CollectParameters(&m_nIp, 1);
 		if (!m_bCondResult)
+#ifdef VC_CLEO
+			if(ScriptParams[0] >= 0) {
+				SetIP(ScriptParams[0]);
+			} else {
+				if(sctype == SCRIPT_TYPE_CUSTOM) {
+					SetIP(base_nIp - ScriptParams[0]);
+				} else {
+					SetIP(SIZE_MAIN_SCRIPT - ScriptParams[0]);
+				}
+			}
+#else
 			SetIP(ScriptParams[0] >= 0 ? ScriptParams[0] : SIZE_MAIN_SCRIPT - ScriptParams[0]);
+#endif // VC_CLEO
+			
+
+			
 		/* Check COMMAND_GOTO note. */
 		return 0;
 	case COMMAND_TERMINATE_THIS_SCRIPT:
@@ -1600,7 +1731,21 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		CollectParameters(&m_nIp, 1);
 		script_assert(m_nStackPointer < MAX_STACK_DEPTH);
 		m_anStack[m_nStackPointer++] = m_nIp;
+#ifdef VC_CLEO
+		if(ScriptParams[0] >= 0) {
+			SetIP(ScriptParams[0]);
+		} else {
+			if(sctype == SCRIPT_TYPE_CUSTOM) {
+				SetIP(base_nIp - ScriptParams[0]);
+			} else {
+				SetIP(SIZE_MAIN_SCRIPT - ScriptParams[0]);
+			}
+		}
+#else
 		SetIP(ScriptParams[0] >= 0 ? ScriptParams[0] : SIZE_MAIN_SCRIPT - ScriptParams[0]);
+#endif // VC_CLEO
+
+		
 		return 0;
 	case COMMAND_RETURN:
 		script_assert(m_nStackPointer > 0); /* No more SSU */

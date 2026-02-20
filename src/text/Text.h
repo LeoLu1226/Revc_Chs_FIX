@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 char *UnicodeToAscii(wchar *src);
 char *UnicodeToAsciiForSaveLoad(wchar *src);
@@ -94,6 +94,10 @@ public:
 	void GetNameOfLoadedMissionText(char *outName);
 	void ReadChunkHeader(ChunkHeader *buf, int32 file, size_t *bytes_read);
 	void LoadMissionText(char *MissionTableName);
+	const char* GetMissiontTableName(void);
+#ifdef VC_CLEO
+	bool AddKeyValue(const char *key, const wchar *value);
+#endif // VC_CLEO
 };
 
 extern CText TheText;

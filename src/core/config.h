@@ -4,6 +4,8 @@
 #ifdef __MWERKS__
 #define VANILLA_DEFINES
 #endif
+//CLEO支持
+#define VC_CLEO
 
 enum Config {
 	NUMPLAYERS = 1,
