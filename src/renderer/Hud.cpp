@@ -623,9 +623,9 @@ void CHud::Draw()
 						
 
 						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || FRAMECOUNTER & 4) {
-							// CFont::SetColor(HEALTH_COLOR);
-							//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 64.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							 CFont::SetColor(HEALTH_COLOR);
+							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 64.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 							
 
 
@@ -655,9 +655,9 @@ void CHud::Draw()
 						
 
 						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
-							// CFont::SetColor(ARMOUR_COLOR);
-							//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 82.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							 CFont::SetColor(ARMOUR_COLOR);
+							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							//CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 82.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
 					}
 				}
