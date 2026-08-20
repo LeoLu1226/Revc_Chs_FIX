@@ -241,7 +241,7 @@ CCamera::Init(void)
 	m_uiTransitionState = 0;
 	m_uiTimeTransitionStart = 0;
 	m_bLookingAtPlayer = true;
-	m_f3rdPersonCHairMultX = 0.4f;
+	m_f3rdPersonCHairMultX = 0.5f;
 	m_f3rdPersonCHairMultY = 0.4f;
 	m_fAvoidTheGeometryProbsTimer = 0.0f;
 	m_nAvoidTheGeometryProbsDirn = 0;
