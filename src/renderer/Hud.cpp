@@ -651,7 +651,7 @@ void CHud::Draw()
 					CFont::SetColor(ARMOUR_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f+20.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 						
 
 						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
