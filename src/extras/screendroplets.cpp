@@ -449,6 +449,17 @@ ScreenDroplets::SprayDrops(void)
 		}
 	}
 
+	for(i = 0; i < MAX_AUDIOPEDHIT; i++) { 
+		CAudioPedHit *blo = CAudioPedHit::Get(i);
+		if(blo->pParticleObject) {
+			 CVector dist = blo->pParticleObject->GetPosition() - ms_prevCamPos;
+			 if(dist.MagnitudeSqr() > 40.0f || 
+			    DotProduct(dist, ms_prevCamUp) < 0.0f) continue;
+
+			FillScreenMoving(1.0f, true);
+		}
+	}
+
 	static int ndrops[] = {
 		125, 250, 500, 1000, 1000,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -742,11 +753,11 @@ void
 openim2d_uv2(void)
 {
 	//u_xform = rw::gl3::registerUniform("u_xform", rw::gl3::UNIFORM_VEC4);	// this doesn't add a new one, so it's safe
-    // ÐÞ¸´ E0140 ºÍ E0135 ´íÎó
-    // 1. rw::gl3::registerUniform Ö»½ÓÊÜÒ»¸ö²ÎÊý£¨uniform Ãû³Æ£©£¬²»½ÓÊÜÀàÐÍ²ÎÊý
-    // 2. rw::gl3 ÃüÃû¿Õ¼äÃ»ÓÐ UNIFORM_VEC4£¬ÀàÐÍ²ÎÊýÓ¦È¥µô
+    // ä¿®å¤ E0140 å’Œ E0135 é”™è¯¯
+    // 1. rw::gl3::registerUniform åªæŽ¥å—ä¸€ä¸ªå‚æ•°ï¼ˆuniform åç§°ï¼‰ï¼Œä¸æŽ¥å—ç±»åž‹å‚æ•°
+    // 2. rw::gl3 å‘½åç©ºé—´æ²¡æœ‰ UNIFORM_VEC4ï¼Œç±»åž‹å‚æ•°åº”åŽ»æŽ‰
 
-    u_xform = rw::gl3::registerUniform("u_xform"); // Ö»´«µÝÃû³Æ²ÎÊý
+    u_xform = rw::gl3::registerUniform("u_xform"); // åªä¼ é€’åç§°å‚æ•°
 	glGenBuffers(1, &im2D_UV2_Ibo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im2D_UV2_Ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, NUMINDICES*2, nil, GL_STREAM_DRAW);
