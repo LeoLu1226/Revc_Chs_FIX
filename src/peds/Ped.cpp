@@ -4378,7 +4378,7 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 
 		if (!veh->bEngineOn) {
 			veh->bEngineOn = true;
-			DMAudio.PlayOneShot(ped->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
+			DMAudio.PlayOneShot(veh->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
 		}
 		if (ped->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && ped->CharCreatedBy == RANDOM_CHAR
 			&& ped != FindPlayerPed() && ped->m_nPedType != PEDTYPE_EMERGENCY) {
@@ -9222,7 +9222,7 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 	}
 
 	if (ped->IsPlayer() || ped->m_pedInObjective && ped->m_pedInObjective->IsPlayer())
-		ped->ApplyMoveForce(0.0f, 0.0f, 8.5f);//ÌøÔ¾¸ß¶È
+		ped->ApplyMoveForce(0.0f, 0.0f, 8.5f);//è·³è·ƒé«˜åº¦
 	else
 		ped->ApplyMoveForce(0.0f, 0.0f, 4.5f);
 	
@@ -9234,8 +9234,8 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 		if (TheCamera.Cams[0].Using3rdPersonMouseCam()) {
 #endif
 			float fpsAngle = ped->WorkOutHeadingForMovingFirstPerson(ped->m_fRotationCur);
-			ped->m_vecMoveSpeed.x = -velocityFromAnim * Sin(fpsAngle);//ÌøÔ¾ºóµÄËÙ¶È
-			ped->m_vecMoveSpeed.y = velocityFromAnim * Cos(fpsAngle);//ÌøÔ¾ºóµÄËÙ¶È
+			ped->m_vecMoveSpeed.x = -velocityFromAnim * Sin(fpsAngle);//è·³è·ƒåŽçš„é€Ÿåº¦
+			ped->m_vecMoveSpeed.y = velocityFromAnim * Cos(fpsAngle);//è·³è·ƒåŽçš„é€Ÿåº¦
 		} else {
 			ped->m_vecMoveSpeed.x = -velocityFromAnim * Sin(ped->m_fRotationCur) ;
 			ped->m_vecMoveSpeed.y = velocityFromAnim * Cos(ped->m_fRotationCur) ;
