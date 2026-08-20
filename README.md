@@ -19,9 +19,9 @@
 确保目录如下: re3/vendor/glfw-3.3.2.bin.WIN64   
 &nbsp;  
 如果方案中有OpenAL(oal)请将:  
-vendor/openal-soft/dist/Win64/OpenAL32.dll  
-vendor/mpg123/dist/Win64/libmpg123-0.dll  
-vendor/libsndfile/dist/Win64/libsndfile-1.dll  
+vendor/openal-soft/dist/Win64(或32，取决于你编译版本)/OpenAL32.dll  
+vendor/mpg123/dist/Win64(或32，取决于你编译版本)/libmpg123-0.dll  
+vendor/libsndfile/dist/Win64(或32，取决于你编译版本)/libsndfile-1.dll  
 这三个文件复制到游戏根目录中，否则游戏无法启动  
  &nbsp; 
 ************************************************************************
