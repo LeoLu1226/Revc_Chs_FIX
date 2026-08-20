@@ -41,6 +41,9 @@ bool CCamera::bFreeCam = false;
 int nPreviousMode = -1;
 #endif
 
+#define m_fMultiHori -0.8f
+#define m_fMultiVert 0.8f
+
 void
 CCam::Init(void)
 {
@@ -1385,8 +1388,8 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 		float LookLeftRight, LookUpDown;
 		if((MouseX != 0.0f || MouseY != 0.0f) && !CPad::GetPad(0)->ArePlayerControlsDisabled()){
 			UseMouse = true;
-			LookLeftRight = -2.5f*MouseX;
-			LookUpDown = 4.0f*MouseY;
+			LookLeftRight = m_fMultiHori * MouseX;
+			LookUpDown = m_fMultiVert * MouseY;
 		}else{
 			LookLeftRight = -CPad::GetPad(0)->LookAroundLeftRight();
 			LookUpDown = CPad::GetPad(0)->LookAroundUpDown();
@@ -2348,8 +2351,8 @@ CCam::Process_M16_1stPerson(const CVector &CameraTarget, float, float, float)
 	float LookLeftRight, LookUpDown;
 	if(MouseX != 0.0f || MouseY != 0.0f){
 		UseMouse = true;
-		LookLeftRight = -3.0f*MouseX;
-		LookUpDown = 4.0f*MouseY;
+		LookLeftRight = m_fMultiHori * MouseX;
+		LookUpDown = m_fMultiVert * MouseY;
 	}else{
 		LookLeftRight = -CPad::GetPad(0)->SniperModeLookLeftRight();
 		LookUpDown = CPad::GetPad(0)->SniperModeLookUpDown();
@@ -2759,8 +2762,8 @@ CCam::Process_1rstPersonPedOnPC(const CVector&, float TargetOrientation, float, 
 		float LookLeftRight, LookUpDown;
 		if(MouseX != 0.0f || MouseY != 0.0f){
 			UseMouse = true;
-			LookLeftRight = -3.0f*MouseX;
-			LookUpDown = 4.0f*MouseY;
+			LookLeftRight = m_fMultiHori * MouseX;
+			LookUpDown = m_fMultiVert * MouseY;
 		}else{
 			LookLeftRight = -CPad::GetPad(0)->LookAroundLeftRight();
 			LookUpDown = CPad::GetPad(0)->LookAroundUpDown();
@@ -2898,8 +2901,8 @@ CCam::Process_Sniper(const CVector &CameraTarget, float TargetOrientation, float
 	float LookLeftRight, LookUpDown;
 	if(MouseX != 0.0f || MouseY != 0.0f){
 		UseMouse = true;
-		LookLeftRight = -3.0f*MouseX;
-		LookUpDown = 4.0f*MouseY;
+		LookLeftRight = m_fMultiHori * MouseX;
+		LookUpDown = m_fMultiVert * MouseY;
 	}else{
 		LookLeftRight = -CPad::GetPad(0)->SniperModeLookLeftRight();
 		LookUpDown = CPad::GetPad(0)->SniperModeLookUpDown();
@@ -5359,7 +5362,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		float &carGunLR = ((CAutomobile*)car)->m_fCarGunLR;
 		CVector hi = Multiply3x3(Front, car->GetMatrix());
 
-		// III/VC's firetruck turret angle is reversed Ïû·À³µÅÚËþ½Ç¶Èµßµ¹
+		// III/VC's firetruck turret angle is reversed æ¶ˆé˜²è½¦ç‚®å¡”è§’åº¦é¢ å€’
 		float angleToFace = (car->GetModelIndex() == MI_FIRETRUCK ? -hi.Heading() : hi.Heading());
 
 		if (angleToFace <= carGunLR + PI) {
@@ -5390,7 +5393,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		}
 
 		// Because firetruk turret also has Y movement
-		// ÒòÎªÏû·À³µÅÚËþÒ²ÓÐ Y ÏòÒÆ¶¯¹¦ÄÜ
+		// å› ä¸ºæ¶ˆé˜²è½¦ç‚®å¡”ä¹Ÿæœ‰ Y å‘ç§»åŠ¨åŠŸèƒ½
 		if (car->GetModelIndex() == MI_FIRETRUCK) {
 			float &carGunUD = ((CAutomobile*)car)->m_fCarGunUD;
 
