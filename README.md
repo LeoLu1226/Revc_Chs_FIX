@@ -1,14 +1,35 @@
-﻿
-# Revc的中文化支持和cleo支持
-中文的已经好了 gamefiles文件夹里面已经包含无名的文本和贴图了 自己复制到游戏目录  
-cleo下次更新会加入  
+本Fork基于reVC_CHS修复了以下问题：
 
+1.修复汽车发动机的启动声音播放异常的问题
+2.补全CHS版缺失的autoconf文件夹
+3.修复CHS版护甲数字错位的问题
+4.修复CHS版左上角提示信息背景颜色不正确的问题
+5.补全CHS版缺失的shaders
+6.删除CHS版多余源码副本
+7.将帧数限制器从锁30帧调整为锁60帧
+8.恢复了原版VC的血液屏幕效果
+9.修复了霰弹枪换弹声音播放异常的问题
+10.修复了开始新游戏时会重置鼠标灵敏度的问题
+11.修复了鼠标水平竖直灵敏度不一致的问题
+12.启用了PS2加载动画
+
+编译时记得右键解决方案资源管理器中的reVC，并将C语言调整为17版，否则会编译错误
+
+如果需要OpenGL方案请下载3.3.2的SDK https://github.com/glfw/glfw/releases/tag/3.3.2 确保目录如下: re3/vendor/glfw-3.3.2.bin.WIN64
+
+如果方案中有OpenAL(oal)请将:
+vendor/openal-soft/dist/Win64/OpenAL32.dll
+vendor/mpg123/dist/Win64/libmpg123-0.dll
+vendor/libsndfile/dist/Win64/libsndfile-1.dll
+这三个文件复制到游戏根目录中，否则游戏无法启动
+
+************************************************************************
+ 
+# reVC的中文化支持和CLEO支持
+中文已经好了，gamefiles文件夹里面已经包含无名的文本和贴图了(chinese_text_file文件夹)，自己复制到游戏目录   
 CLEO已经支持，部分涉及读写内存的我没实现，因为和原版不兼容了，有需要的可以根据cleo的源码自行添加 其他的应该都支持了
 
-
-
-
-<img src="https://github.com/GTAmodding/re3/blob/miami/logo.png?raw=true" alt="reVC logo" width="200">
+<img src="https://github.com/mrxenginner/reVC/blob/miami/res/images/logo_1024.png?raw=true" alt="reVC logo" width="200">
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FGTAmodding%2Fre3%2Fbadge%3Fref%3Dmiami&style=flat)](https://actions-badge.atrox.dev/GTAmodding/re3/goto?ref=miami)
 <a href="https://discord.gg/ERYg58ttcE"><img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" /></a>
