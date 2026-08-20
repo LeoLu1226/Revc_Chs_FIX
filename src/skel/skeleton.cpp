@@ -403,7 +403,7 @@ RsInitialize(void)
 	RsGlobal.width = DEFAULT_SCREEN_WIDTH;
 	RsGlobal.height = DEFAULT_SCREEN_HEIGHT;
 	
-	RsGlobal.maxFPS = 30;
+	RsGlobal.maxFPS = 60;
 	 
 	RsGlobal.quit = FALSE;
 
