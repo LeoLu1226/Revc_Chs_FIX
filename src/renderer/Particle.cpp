@@ -1562,6 +1562,8 @@ void CParticle::Update()
 									
 									Randomizer++;
 									int32 randVal = int32(Randomizer & 7);
+
+									CParticleObject::AddObject(POBJECT_PED_HIT_BLOOD, vecPosn, true); 
 									
 									if ( randVal == 5 )
 									{
