@@ -1367,7 +1367,7 @@ void CHud::Draw()
 					CFont::SetBackgroundOn();
 					CFont::SetBackGroundOnlyTextOff();
 					CFont::SetDropShadowPosition(0);
-					CFont::SetBackgroundColor(CRGBA(12, 30, 38, fAlpha * 0.9f));
+					CFont::SetBackgroundColor(CRGBA(0, 0, 0, fAlpha * 0.9f));
 					CFont::SetColor(CRGBA(175, 175, 175, 255));
 					CFont::PrintString(SCREEN_SCALE_X(34.0f), SCREEN_SCALE_Y(28.0f + (150.0f - PagerXOffset) * 0.6f), m_HelpMessageToPrint);
 					CFont::SetAlphaFade(255.0f);
