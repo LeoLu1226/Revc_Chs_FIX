@@ -6,6 +6,7 @@
 
 #define MAX_PARTICLEOBJECTS 70
 #define MAX_AUDIOHYDRANTS   8
+#define MAX_AUDIOPEDHIT 8
 
 enum eParticleObjectType
 {
@@ -31,6 +32,7 @@ enum eParticleObjectType
 	POBJECT_EXPLOSION_ONCE,
 	POBJECT_CATALINAS_GUNFLASH,
 	POBJECT_CATALINAS_SHOTGUNFLASH,
+	POBJECT_PED_HIT_BLOOD,
 };
 
 enum eParticleObjectState
@@ -109,4 +111,18 @@ public:
 	static void Remove(CParticleObject *particleobject);
 
 	static CAudioHydrant *Get(int n);	// for neo screen droplets
+};
+
+class CAudioPedHit // ZAdd: Blood droplets
+{
+public:
+	int32 AudioEntity;
+	CParticleObject *pParticleObject;
+
+	CAudioPedHit() : AudioEntity(AEHANDLE_NONE), pParticleObject(nil) {}
+
+	static bool Add(CParticleObject *particleobject);
+	static void Remove(CParticleObject *particleobject);
+
+	static CAudioPedHit *Get(int n); // for neo screen droplets
 };
