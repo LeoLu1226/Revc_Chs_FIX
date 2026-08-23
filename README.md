@@ -30,23 +30,26 @@ CLEO已经支持，部分涉及读写内存的我没实现，因为和原版不�
 
 也兼容旧写法的字符串值（`TXD` / `GDI`），写错或缺失时自动回退到 DirectWrite。
 
+> 以下示例中的 `<…>` 均为占位符，请替换为你**本机已安装**或**有权分发**的字体。本仓库不捆绑任何字体文件；只额外列了 Windows 自带字体作为"开箱可用"的参考。
+
 ### DirectWrite 模式（推荐配置示例）
 
 ```ini
 [Fonts]
 TextRenderer=3
-NormalFonts=MiSans              ; 正体字体（系统已装或 models 目录里的 ttf）
+NormalFonts=<主字体名>          ; 系统已安装的字体名，或 models 目录下的 .ttf（如微软雅黑填 msyh）
 NormalBold=1                    ; 1 = 默认用粗体字重（700）
-SlantFontFile=models\YingZhangXingShu.ttf   ; 斜体（意大利体）字体
+SlantFontFile=models\<斜体字体>.ttf   ; 斜体（意大利体）字体；可不配，缺省用主字体的伪斜体
 SlantBold=0
 GlyphHeight=56                  ; 字格高度（像素），越大笔画越细
-RareFontFile=models\MiSans.ttf,C:\Windows\Fonts\seguiemj.ttf   ; 兜底字体链（见下）
+RareFontFile=<主字体文件>,<补充字体…>  ; 兜底字体链（见下）
 ```
 
-- **`RareFontFile` 兜底链**：逗号分隔多个字体文件，从左到右依次尝试。主字体**缺字形的任何码位**（生僻字、Emoji、韩文、BMP 缺字）都会按链查找，第一个能画出该字的字体生效——所以"永不缺字"靠的就是它。
-  - 彩色 Emoji：加 Windows 自带的 `C:\Windows\Fonts\seguiemj.ttf`（COLR/CPAL 彩色）或你的 NotoEmoji 文件
-  - 韩文：加 `C:\Windows\Fonts\malgun.ttf`
-  - 生僻字（如 𰻞）：加 `C:\Windows\Fonts\SimsunExtG.ttf`
+- **`RareFontFile` 兜底链**：逗号分隔多个字体文件，从左到右依次尝试。主字体**缺字形的任何码位**（生僻字、Emoji、韩文、BMP 缺字）都会按链查找，第一个能画出该字的字体生效——所以"永不缺字"靠的就是它。按需补充 Windows **自带**字体即可：
+  - 彩色 Emoji：`C:\Windows\Fonts\seguiemj.ttf`（COLR/CPAL 彩色，Win8.1+ 自带）
+  - 韩文：`C:\Windows\Fonts\malgun.ttf`
+  - 生僻字（如 𰻞）：`C:\Windows\Fonts\SimsunExtG.ttf`
+  - 主字体缺的简中字形：`C:\Windows\Fonts\msyh.ttc`（微软雅黑）
 - **可变字重**：`NormalWeight=100~900`（对应 NormalFonts 的粗细，默认 400），`SlantWeight`、`RareWeight` 同理；`NormalBold=1` 时默认字重为 700。这些键会自动写回 `reVC.ini`（不需要手动补）。
 
 ### GDI 模式
@@ -54,10 +57,10 @@ RareFontFile=models\MiSans.ttf,C:\Windows\Fonts\seguiemj.ttf   ; 兜底字体链
 ```ini
 [Fonts]
 TextRenderer=2
-NormalFonts=MiSans
-SlantFontFile=models\YingZhangXingShu.ttf
+NormalFonts=<主字体名>
+SlantFontFile=models\<斜体字体>.ttf
 GlyphHeight=56
-RareFontFile=models\MiSans.ttf,C:\Windows\Fonts\malgun.ttf,C:\Windows\Fonts\SimsunExtG.ttf
+RareFontFile=<主字体文件>,<补充字体…>
 ```
 
 GDI 模式也能显示全部码位（超出 BMP 的走 stb_truetype 兜底链），只是没有彩色 Emoji 和字重轴。
