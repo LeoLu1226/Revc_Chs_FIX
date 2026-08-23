@@ -16,6 +16,69 @@ CLEO已经支持，部分涉及读写内存的我没实现，因为和原版不�
 * 可变字重：`NormalWeight` / `SlantWeight` / `RareWeight`（100–900，可自动保存回写 reVC.ini）
 * GXT 热重载：修改任意语言文本约 1 秒自动生效（开发调试用）
 
+## 文本渲染模式与字体配置（GDI / DirectWrite）
+
+所有字体相关配置都在游戏目录的 `reVC.ini` 的 `[Fonts]` 段，**改完需重启游戏生效**（启动时读取）。
+
+### 三种渲染模式
+
+| `TextRenderer` | 模式 | 说明 |
+|---|---|---|
+| `3` | **DirectWrite（默认，推荐）** | 动态字库。任意中文 + 生僻字（𰻞 U+30EDE 等扩展平面）+ 彩色 Emoji（COLR/CPAL）+ 可变字重，全部支持 |
+| `2` | **GDI** | GDI `GetGlyphOutlineW` 动态字库，兼容老机器；不支持彩色 Emoji 与可变字重轴 |
+| `1` | **TXD（最老）** | 静态 `MODELS\CHINESE.TXD` + `Chinese.dat` 贴图字库（即 gamefiles/chinese_text_file 里那套），无动态能力 |
+
+也兼容旧写法的字符串值（`TXD` / `GDI`），写错或缺失时自动回退到 DirectWrite。
+
+### DirectWrite 模式（推荐配置示例）
+
+```ini
+[Fonts]
+TextRenderer=3
+NormalFonts=MiSans              ; 正体字体（系统已装或 models 目录里的 ttf）
+NormalBold=1                    ; 1 = 默认用粗体字重（700）
+SlantFontFile=models\YingZhangXingShu.ttf   ; 斜体（意大利体）字体
+SlantBold=0
+GlyphHeight=56                  ; 字格高度（像素），越大笔画越细
+RareFontFile=models\MiSans.ttf,C:\Windows\Fonts\seguiemj.ttf   ; 兜底字体链（见下）
+```
+
+- **`RareFontFile` 兜底链**：逗号分隔多个字体文件，从左到右依次尝试。主字体**缺字形的任何码位**（生僻字、Emoji、韩文、BMP 缺字）都会按链查找，第一个能画出该字的字体生效——所以"永不缺字"靠的就是它。
+  - 彩色 Emoji：加 Windows 自带的 `C:\Windows\Fonts\seguiemj.ttf`（COLR/CPAL 彩色）或你的 NotoEmoji 文件
+  - 韩文：加 `C:\Windows\Fonts\malgun.ttf`
+  - 生僻字（如 𰻞）：加 `C:\Windows\Fonts\SimsunExtG.ttf`
+- **可变字重**：`NormalWeight=100~900`（对应 NormalFonts 的粗细，默认 400），`SlantWeight`、`RareWeight` 同理；`NormalBold=1` 时默认字重为 700。这些键会自动写回 `reVC.ini`（不需要手动补）。
+
+### GDI 模式
+
+```ini
+[Fonts]
+TextRenderer=2
+NormalFonts=MiSans
+SlantFontFile=models\YingZhangXingShu.ttf
+GlyphHeight=56
+RareFontFile=models\MiSans.ttf,C:\Windows\Fonts\malgun.ttf,C:\Windows\Fonts\SimsunExtG.ttf
+```
+
+GDI 模式也能显示全部码位（超出 BMP 的走 stb_truetype 兜底链），只是没有彩色 Emoji 和字重轴。
+
+### TXD 模式
+
+```ini
+[Fonts]
+TextRenderer=1
+```
+
+需要把 `gamefiles/chinese_text_file/` 下的 `MODELS\CHINESE.TXD` 与 `Chinese.dat` 放进游戏目录对应位置（其余两种模式不需要它们）。
+
+### GXT 热重载（开发调试）
+
+改完 GXT 文本不用重启：游戏运行中保存 `TEXT\xx.GXT`（xx = 当前语言），约 1 秒后自动生效；切换语言会自动跟随新的语言文件；GXT 损坏时自动回滚不崩溃。仅影响文本，不影响 `[Fonts]`（字体配置仍要重启生效）。
+
+### 调试日志
+
+启动时会在游戏 exe 旁生成 `chsfont.log`，记录字体加载/渲染回退过程；字显示不出来时先看它。字体文件版权归各自作者所有，本仓库不包含任何字体文件。
+
 
 
 
