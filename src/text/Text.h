@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 char *UnicodeToAscii(wchar *src);
 char *UnicodeToAsciiForSaveLoad(wchar *src);
@@ -88,6 +88,10 @@ public:
 	CText(void);
 	void Load(void);
 	void Unload(void);
+	// Dev tool: transactionally reload the current language's GXT from disk.
+	// Backs up the live tables first, so a missing or half-written file rolls
+	// back to the previous text instead of blanking the UI.
+	bool ReloadFromDisk(void);
 	wchar *Get(const char *key);
 	wchar GetUpperCase(wchar c);
 	void UpperCase(wchar *s);
@@ -101,3 +105,7 @@ public:
 };
 
 extern CText TheText;
+// Dev tool: call once per frame from the main loop. Watches the GXT of the
+// CURRENT language (any of the supported languages); when the file changes
+// on disk the text tables reload automatically after a short delay.
+void TextHotReloadTick(void);

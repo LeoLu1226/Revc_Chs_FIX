@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // disables (most) stuff that wasn't in original gta-vc.exe 禁用（大多数）非原始内容
 #ifdef __MWERKS__

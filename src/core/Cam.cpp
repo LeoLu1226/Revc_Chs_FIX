@@ -5359,7 +5359,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		float &carGunLR = ((CAutomobile*)car)->m_fCarGunLR;
 		CVector hi = Multiply3x3(Front, car->GetMatrix());
 
-		// III/VC's firetruck turret angle is reversed Ïû·À³µÅÚËþ½Ç¶Èµßµ¹
+		// III/VC's firetruck turret angle is reversed æ¶ˆé˜²è½¦ç‚®å¡”è§’åº¦é¢ å€’
 		float angleToFace = (car->GetModelIndex() == MI_FIRETRUCK ? -hi.Heading() : hi.Heading());
 
 		if (angleToFace <= carGunLR + PI) {
@@ -5390,7 +5390,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		}
 
 		// Because firetruk turret also has Y movement
-		// ÒòÎªÏû·À³µÅÚËþÒ²ÓÐ Y ÏòÒÆ¶¯¹¦ÄÜ
+		// å› ä¸ºæ¶ˆé˜²è½¦ç‚®å¡”ä¹Ÿæœ‰ Y å‘ç§»åŠ¨åŠŸèƒ½
 		if (car->GetModelIndex() == MI_FIRETRUCK) {
 			float &carGunUD = ((CAutomobile*)car)->m_fCarGunUD;
 

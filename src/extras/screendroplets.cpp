@@ -742,11 +742,11 @@ void
 openim2d_uv2(void)
 {
 	//u_xform = rw::gl3::registerUniform("u_xform", rw::gl3::UNIFORM_VEC4);	// this doesn't add a new one, so it's safe
-    // ĞŞ¸´ E0140 ºÍ E0135 ´íÎó
-    // 1. rw::gl3::registerUniform Ö»½ÓÊÜÒ»¸ö²ÎÊı£¨uniform Ãû³Æ£©£¬²»½ÓÊÜÀàĞÍ²ÎÊı
-    // 2. rw::gl3 ÃüÃû¿Õ¼äÃ»ÓĞ UNIFORM_VEC4£¬ÀàĞÍ²ÎÊıÓ¦È¥µô
+    // ä¿®å¤ E0140 å’Œ E0135 é”™è¯¯
+    // 1. rw::gl3::registerUniform åªæ¥å—ä¸€ä¸ªå‚æ•°ï¼ˆuniform åç§°ï¼‰ï¼Œä¸æ¥å—ç±»å‹å‚æ•°
+    // 2. rw::gl3 å‘½åç©ºé—´æ²¡æœ‰ UNIFORM_VEC4ï¼Œç±»å‹å‚æ•°åº”å»æ‰
 
-    u_xform = rw::gl3::registerUniform("u_xform"); // Ö»´«µİÃû³Æ²ÎÊı
+    u_xform = rw::gl3::registerUniform("u_xform"); // åªä¼ é€’åç§°å‚æ•°
 	glGenBuffers(1, &im2D_UV2_Ibo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im2D_UV2_Ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, NUMINDICES*2, nil, GL_STREAM_DRAW);

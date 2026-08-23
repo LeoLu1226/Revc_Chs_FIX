@@ -1,4 +1,4 @@
-﻿#define FORCE_PC_SCALING
+#define FORCE_PC_SCALING
 #define WITHWINDOWS
 #define WITHDINPUT
 #include "common.h"

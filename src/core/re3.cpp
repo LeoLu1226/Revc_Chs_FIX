@@ -140,10 +140,10 @@ void
 CustomFrontendOptionsPopulate(void)
 {
 	// Most of custom options are done statically in MenuScreensCustom.cpp, we add them here only if they're dependent to extra files
-	//´ó¶àÊı×Ô¶¨ÒåÑ¡Ïî¶¼ÔÚ MenuScreensCustom.cpp ÖĞ¾²Ì¬Íê³É£¬Ö»ÓĞµ±ËüÃÇÒÀÀµÓÚ¶îÍâÎÄ¼şÊ±£¬ÎÒÃÇ²Å½«ÆäÌí¼Óµ½´Ë´¦
+	//å¤§å¤šæ•°è‡ªå®šä¹‰é€‰é¡¹éƒ½åœ¨ MenuScreensCustom.cpp ä¸­é™æ€å®Œæˆï¼Œåªæœ‰å½“å®ƒä»¬ä¾èµ–äºé¢å¤–æ–‡ä»¶æ—¶ï¼Œæˆ‘ä»¬æ‰å°†å…¶æ·»åŠ åˆ°æ­¤å¤„
 	int fd;
 	// These work only if we have neo folder, so they're dynamically added
-	// Ö»ÓĞµ±ÎÒÃÇÓĞ neo ÎÄ¼ş¼ĞÊ±£¬ÕâĞ©²Å»áÆğ×÷ÓÃ£¬Òò´ËËüÃÇÊÇ¶¯Ì¬Ìí¼ÓµÄ
+	// åªæœ‰å½“æˆ‘ä»¬æœ‰ neo æ–‡ä»¶å¤¹æ—¶ï¼Œè¿™äº›æ‰ä¼šèµ·ä½œç”¨ï¼Œå› æ­¤å®ƒä»¬æ˜¯åŠ¨æ€æ·»åŠ çš„
 #ifdef EXTENDED_PIPELINES
 	const char *vehPipelineNames[] = { "FED_MFX", "FED_NEO" };
 	const char *off_on[] = { "FEM_OFF", "FEM_ON" };
@@ -166,7 +166,7 @@ CustomFrontendOptionsPopulate(void)
 	}
 #endif
 	// Add outsourced language translations, if files are found
-	// Èç¹ûÕÒµ½ÎÄ¼ş£¬Ìí¼ÓÍâ°üÓïÑÔ·­Òë
+	// å¦‚æœæ‰¾åˆ°æ–‡ä»¶ï¼Œæ·»åŠ å¤–åŒ…è¯­è¨€ç¿»è¯‘
 #ifdef MORE_LANGUAGES
 	int fd2;
 	FrontendOptionSetCursor(MENUPAGE_LANGUAGE_SETTINGS, 5, false);
@@ -510,7 +510,7 @@ bool LoadINISettings()
 	ReadIniIfExists("VideoMode", "Depth", &FrontEndMenuManager.m_nPrefsDepth);
 	ReadIniIfExists("VideoMode", "Subsystem", &FrontEndMenuManager.m_nPrefsSubsystem);
 	// Windowed mode is loaded below in CUSTOM_FRONTEND_OPTIONS section
-	//´°¿ÚÄ£Ê½ÔÚÏÂÃæµÄ CUSTOM_FRONTEND_OPTIONS ²¿·ÖÖĞ¼ÓÔØ
+	//çª—å£æ¨¡å¼åœ¨ä¸‹é¢çš„ CUSTOM_FRONTEND_OPTIONS éƒ¨åˆ†ä¸­åŠ è½½
 #else
 	ReadIniIfExists("Graphics", "VideoMode", &FrontEndMenuManager.m_nDisplayVideoMode);
 #endif
@@ -620,7 +620,7 @@ void SaveINISettings()
 	StoreIni("VideoMode", "Depth", FrontEndMenuManager.m_nPrefsDepth);
 	StoreIni("VideoMode", "Subsystem", FrontEndMenuManager.m_nPrefsSubsystem);
 	// Windowed mode is loaded below in CUSTOM_FRONTEND_OPTIONS section
-	//´°¿ÚÄ£Ê½ÔÚÏÂÃæµÄ CUSTOM_FRONTEND_OPTIONS ²¿·ÖÖĞ¼ÓÔØ
+	//çª—å£æ¨¡å¼åœ¨ä¸‹é¢çš„ CUSTOM_FRONTEND_OPTIONS éƒ¨åˆ†ä¸­åŠ è½½
 #else
 	StoreIni("Graphics", "VideoMode", FrontEndMenuManager.m_nDisplayVideoMode);
 #endif
@@ -701,6 +701,11 @@ void SaveINISettings()
 	}
 #endif
 
+	#ifdef _WIN32
+	// æŠŠ [Fonts] é…ç½®å¹¶å…¥ cfgï¼Œé˜²æ­¢ mINI å†™å›æ—¶ä¸¢å¼ƒè¯¥èŠ‚
+	extern void ChsFontSaveIniValues(mINI::INIStructure &cfg);
+	ChsFontSaveIniValues(cfg);
+#endif
 	ini.write(cfg);
 }
 
@@ -1100,7 +1105,7 @@ extern bool gbRenderWorld2;
 		DebugMenuAddVarBool8("Render", "Occlusion debug", &bDispayOccDebugStuff, nil);
 #endif
 #ifdef LIBRW
-		//¸Ä
+		//æ”¹
 		//DebugMenuAddVarBool32("Render", "MatFX env map apply light", &rw::MatFX::envMapApplyLight, nil);
 		//DebugMenuAddVarBool32("Render", "MatFX env map flip U", &rw::MatFX::envMapFlipU, nil);
 		//DebugMenuAddVarBool32("Render", "MatFX env map use matcolor", &rw::MatFX::envMapUseMatColor, nil);

@@ -30,23 +30,23 @@ bool CPhoneInfo::bDisplayingPhoneMessage;  // is phone picked up
 uint32 CPhoneInfo::PhoneEnableControlsTimer;
 CPhone *CPhoneInfo::pPhoneDisplayingMessages;
 bool CPhoneInfo::bPickingUpPhone;
-CPed *CPhoneInfo::pCallBackPed; //PEDË­ÄÃÆğµç»°£¨ÄÃÆğcbºóÖØÖÃ£© ped who picking up the phone (reset after pickup cb)
+CPed *CPhoneInfo::pCallBackPed; //PEDè°æ‹¿èµ·ç”µè¯ï¼ˆæ‹¿èµ·cbåé‡ç½®ï¼‰ ped who picking up the phone (reset after pickup cb)
 
 /*
 	Entering phonebooth cutscene, showing messages and triggering these things
 	by checking coordinates happens in here - blue mission marker is cosmetic.
-        ½øÈëµç»°Í¤¹ı³¡¶¯»­£¬ÏÔÊ¾ÏûÏ¢²¢´¥·¢ÕâĞ©ÄÚÈİ
-Í¨¹ı¼ì²é×ø±ê·¢ÉúÔÚÕâÀï - À¶É«ÈÎÎñ±ê¼ÇÊÇ×°ÊÎĞÔµÄ¡£
+        è¿›å…¥ç”µè¯äº­è¿‡åœºåŠ¨ç”»ï¼Œæ˜¾ç¤ºæ¶ˆæ¯å¹¶è§¦å‘è¿™äº›å†…å®¹
+é€šè¿‡æ£€æŸ¥åæ ‡å‘ç”Ÿåœ¨è¿™é‡Œ - è“è‰²ä»»åŠ¡æ ‡è®°æ˜¯è£…é¥°æ€§çš„ã€‚
 
 	Repeated message means after the script set the messages for a particular phone,
 	player can pick the phone again with the same messages appearing,
 	after 60 seconds of last phone pick-up.
-        ½øÈëµç»°Í¤¹ı³¡¶¯»­£¬ÏÔÊ¾ÏûÏ¢²¢´¥·¢ÕâĞ©ÄÚÈİ
-Í¨¹ı¼ì²é×ø±ê·¢ÉúÔÚÕâÀï - À¶É«ÈÎÎñ±ê¼ÇÊÇ×°ÊÎĞÔµÄ¡£
+        è¿›å…¥ç”µè¯äº­è¿‡åœºåŠ¨ç”»ï¼Œæ˜¾ç¤ºæ¶ˆæ¯å¹¶è§¦å‘è¿™äº›å†…å®¹
+é€šè¿‡æ£€æŸ¥åæ ‡å‘ç”Ÿåœ¨è¿™é‡Œ - è“è‰²ä»»åŠ¡æ ‡è®°æ˜¯è£…é¥°æ€§çš„ã€‚
 
-ÖØ¸´ÏûÏ¢ÊÇÖ¸ÔÚ½Å±¾ÎªÌØ¶¨µç»°ÉèÖÃÏûÏ¢ºó£¬
-Íæ¼Ò¿ÉÒÔÔÙ´ÎÄÃÆğÊÖ»ú£¬²¢³öÏÖÏàÍ¬µÄÏûÏ¢£¬
-×îºóÒ»´Î½ÓÌıµç»° 60 Ãëºó¡£
+é‡å¤æ¶ˆæ¯æ˜¯æŒ‡åœ¨è„šæœ¬ä¸ºç‰¹å®šç”µè¯è®¾ç½®æ¶ˆæ¯åï¼Œ
+ç©å®¶å¯ä»¥å†æ¬¡æ‹¿èµ·æ‰‹æœºï¼Œå¹¶å‡ºç°ç›¸åŒçš„æ¶ˆæ¯ï¼Œ
+æœ€åä¸€æ¬¡æ¥å¬ç”µè¯ 60 ç§’åã€‚
 */
 
 void
@@ -240,7 +240,7 @@ VALIDATESAVEBUF(size)
 void
 CPhoneInfo::SetPhoneMessage_JustOnce(int phoneId, wchar *msg1, wchar *msg2, wchar *msg3, wchar *msg4, wchar *msg5, wchar *msg6)
 {
-	//Èç¹ûÖÁÉÙÓĞÒ»ÌõÏûÏ¢£¬ÔòÓ¦Îª msg1¡£
+	//å¦‚æœè‡³å°‘æœ‰ä¸€æ¡æ¶ˆæ¯ï¼Œåˆ™åº”ä¸º msg1ã€‚
 	// If there is at least one message, it should be msg1.
 	if (msg1) {
 		m_aPhones[phoneId].m_apMessages[0] = msg1;
@@ -278,8 +278,8 @@ CPhoneInfo::GrabPhone(float xPos, float yPos)
 	// "Grab" doesn't mean picking up the phone, it means allocating some particular phone to
 	// whoever called the 024A opcode first with the position parameters closest to phone.
 	// Same phone won't be available on next run of this function.
-	//×¥È¡¡±²¢²»ÒâÎ¶×ÅÄÃÆğÊÖ»ú£¬¶øÊÇÒâÎ¶×Å½«Ò»Ğ©ÌØ¶¨µÄÊÖ»ú·ÖÅä¸ø
-	//Ë­ÏÈÓÃ×î½Ó½üÊÖ»úµÄÎ»ÖÃ²ÎÊıºô½Ğ 024A ²Ù×÷Âë¡£ ÏÂ´ÎÔËĞĞ´Ë¹¦ÄÜÊ±£¬Í¬Ò»²¿ÊÖ»ú½«²»¿ÉÓÃ¡£
+	//æŠ“å–â€å¹¶ä¸æ„å‘³ç€æ‹¿èµ·æ‰‹æœºï¼Œè€Œæ˜¯æ„å‘³ç€å°†ä¸€äº›ç‰¹å®šçš„æ‰‹æœºåˆ†é…ç»™
+	//è°å…ˆç”¨æœ€æ¥è¿‘æ‰‹æœºçš„ä½ç½®å‚æ•°å‘¼å« 024A æ“ä½œç ã€‚ ä¸‹æ¬¡è¿è¡Œæ­¤åŠŸèƒ½æ—¶ï¼ŒåŒä¸€éƒ¨æ‰‹æœºå°†ä¸å¯ç”¨ã€‚
 
 	int nearestPhoneId = -1;
 	CVector pos(xPos, yPos, 0.0f);

@@ -1,9 +1,17 @@
-﻿
+
 # Revc的中文化支持和cleo支持
 中文的已经好了 gamefiles文件夹里面已经包含无名的文本和贴图了 自己复制到游戏目录  
 cleo下次更新会加入  
 
 CLEO已经支持，部分涉及读写内存的我没实现，因为和原版不兼容了，有需要的可以根据cleo的源码自行添加 其他的应该都支持了
+
+## 汉化特性（CHSFont）
+
+* 动态字库：任意中文 + 扩展平面（生僻字 U+30EDE「𰻞」、Emoji）都能显示，永不缺字
+* 三种文本渲染模式（[Fonts] `TextRenderer=1/2/3`）：静态 CHINESE.TXD / GDI 动态字库 / DirectWrite（默认，最完善）
+* 彩色表情符号（COLR/CPAL）与 emoji 右剪修复
+* 可变字重：`NormalWeight` / `SlantWeight` / `RareWeight`（100–900，可自动保存回写 reVC.ini）
+* GXT 热重载：修改任意语言文本约 1 秒自动生效（开发调试用）
 
 
 

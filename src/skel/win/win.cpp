@@ -1,4 +1,4 @@
-﻿#if defined RW_D3D9 || defined RWLIBS || defined __MWERKS__
+#if defined RW_D3D9 || defined RWLIBS || defined __MWERKS__
 
 #define _WIN32_WINDOWS 0x0500
 #define WINVER 0x0500

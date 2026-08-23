@@ -246,7 +246,7 @@ CGame::InitialiseRenderWare(void)
 
 #ifdef LIBRW
 #ifdef PS2_MATFX
-	//¸Ä
+	//æ”¹
 	//rw::MatFX::envMapApplyLight = true;
 	//rw::MatFX::envMapUseMatColor = true;
 	//rw::MatFX::envMapFlipU = true;
@@ -256,7 +256,7 @@ CGame::InitialiseRenderWare(void)
 	rw::MatFX::envMapFlipU = false;
 #endif
 	rw::RGBA envcol = { 64, 64, 64, 255 };
-	//¸Ä
+	//æ”¹
 	//rw::MatFX::envMapColor = envcol;
 #else
 #ifdef PS2_MATFX
@@ -846,6 +846,8 @@ void CGame::InitialiseWhenRestarting(void)
 
 void CGame::Process(void) 
 {
+	// dev tool: poll the current-language GXT and hot-reload it on change
+	TextHotReloadTick();
 	CPad::UpdatePads();
 #ifdef USE_CUSTOM_ALLOCATOR
 	ProcessTidyUpMemory();

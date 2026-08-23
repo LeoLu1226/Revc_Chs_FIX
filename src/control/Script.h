@@ -1,4 +1,4 @@
-﻿      #pragma once
+      #pragma once
 #include "Font.h"
 #include "PedType.h"
 #include "Text.h"

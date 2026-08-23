@@ -296,7 +296,7 @@ enum PedState
 	PED_DUMMY,
 	PED_PAUSE,
 	PED_ATTACK,
-	PED_FIGHT,//т╜╣ьу╬веё╛©иртлЬт╬╩ж╦╢
+	PED_FIGHT,//Е▌÷Е°╟Г╚≥Г²─О╪▄Е▐╞Д╩╔Х╥ЁХ╥┐Ф│╒Е╓█
 	PED_FACE_PHONE,
 	PED_MAKE_CALL,
 	PED_CHAT,

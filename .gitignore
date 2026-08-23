@@ -16,6 +16,15 @@
 # Mono auto generated files
 mono_crash.*
 
+# Build output of this fork's CMake out-of-source builds
+out/
+
+# User-specific VS CMake settings
+CMakeSettings.json
+
+# Archives (e.g. local save backups)
+*.zip
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

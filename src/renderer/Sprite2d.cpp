@@ -350,18 +350,18 @@ CSprite2d::DrawRectNoFill(const CRect &r, const CRGBA &col)
 	float y = r.top;
 	float w = r.right - r.left;
 	float h = r.bottom - r.top;
-	DrawLine(x, y, x + w, y , col);//œ¬
-	DrawLine(x, y+h, x+w, y+h, col);//…œ
+	DrawLine(x, y, x + w, y , col);//‰∏ã
+	DrawLine(x, y+h, x+w, y+h, col);//‰∏ä
 
-	DrawLine(x, y, x, y+h, col);         // ◊Û
-	DrawLine(x+w, y, x+w, y +h, col); // ”“
+	DrawLine(x, y, x, y+h, col);         // Â∑¶
+	DrawLine(x+w, y, x+w, y +h, col); // Âè≥
 
 }
 
 void
 CSprite2d::DrawLine(const float x, const float y, const float x1, const float y1, const CRGBA &col)
 {
-	//float LineW = 1.0f;//œﬂøÌ
+	//float LineW = 1.0f;//Á∫øÂÆΩ
 	CRect r(x,y,x1,y1);
 	//SetVertices(r, col, col, col, col);
 	float offset = 1.0f / 1024.0f;

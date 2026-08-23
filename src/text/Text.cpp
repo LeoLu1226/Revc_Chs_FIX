@@ -1,4 +1,4 @@
-﻿#include "common.h"
+#include "common.h"
 
 #include "FileMgr.h"
 #ifdef MORE_LANGUAGES
@@ -9,11 +9,19 @@
 #include "Text.h"
 #include "Timer.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#include <time.h>
+#endif
+
 wchar WideErrorString[25];
 
 CText TheText;
 
 //在游戏里面重新选择语言后可能不会重新加载任务文本
+
 char Mission_TableName_backup[64]{0};
 
 
@@ -114,6 +122,150 @@ CText::Unload(void)
 	bIsMissionTextLoaded = false;
 	memset(szMissionTableName, 0, sizeof(szMissionTableName));
 }
+
+// === GXT hot-reload (dev tool) ===
+// Language-agnostic: every language the game supports (AMERICAN..SPANISH
+// plus the MORE_LANGUAGES set) is watched through its own GXT file, and
+// switching language in the menu silently switches the watched file.
+static uint64 GxtFileTime(const char *path)
+{
+#if defined(_WIN32)
+	WIN32_FILE_ATTRIBUTE_DATA wfd;
+	if(GetFileAttributesExA(path, GetFileExInfoStandard, &wfd))
+		return ((uint64)wfd.ftLastWriteTime.dwHighDateTime << 32) | wfd.ftLastWriteTime.dwLowDateTime;
+	return 0;
+#else
+	struct stat st;
+	if(stat(path, &st) == 0)
+		return (uint64)st.st_mtime;
+	return 0;
+#endif
+}
+
+static void GxtFileNameForLanguage(char *out, int lang)
+{
+	switch(lang) {
+	case CMenuManager::LANGUAGE_AMERICAN: strcpy(out, "TEXT/AMERICAN.GXT"); break;
+	case CMenuManager::LANGUAGE_FRENCH:   strcpy(out, "TEXT/FRENCH.GXT");   break;
+	case CMenuManager::LANGUAGE_GERMAN:   strcpy(out, "TEXT/GERMAN.GXT");   break;
+	case CMenuManager::LANGUAGE_ITALIAN:  strcpy(out, "TEXT/ITALIAN.GXT");  break;
+	case CMenuManager::LANGUAGE_SPANISH:  strcpy(out, "TEXT/SPANISH.GXT");  break;
+#ifdef MORE_LANGUAGES
+	case CMenuManager::LANGUAGE_POLISH:   strcpy(out, "TEXT/POLISH.GXT");   break;
+	case CMenuManager::LANGUAGE_RUSSIAN:  strcpy(out, "TEXT/RUSSIAN.GXT");  break;
+	case CMenuManager::LANGUAGE_JAPANESE: strcpy(out, "TEXT/JAPANESE.GXT"); break;
+	case CMenuManager::LANGUAGE_CHINESE:  strcpy(out, "TEXT/CHINESE.GXT");  break;
+#endif
+	default: out[0] = 0; break;
+	}
+}
+
+// Transactional reload: deep-copy the live tables, parse the new file,
+// roll back if it is missing/broken, and re-attach the mission text that
+// was active before the reload.
+bool CText::ReloadFromDisk(void)
+{
+	CKeyEntry *savedKeys = nil;
+	CKeyEntry *savedMKeys = nil;
+	wchar *savedData = nil;
+	wchar *savedMData = nil;
+	int savedKeysN = keyArray.numEntries;
+	int savedMKeysN = mission_keyArray.numEntries;
+	int savedDataN = data.numChars;
+	int savedMDataN = mission_data.numChars;
+	CMissionTextOffsets savedOffsets = MissionTextOffsets;
+	bool savedHasOffsets = bHasMissionTextOffsets;
+	bool savedMissionLoaded = bIsMissionTextLoaded;
+	char savedMission[sizeof(szMissionTableName)];
+	memcpy(savedMission, szMissionTableName, sizeof(szMissionTableName));
+
+	if(savedKeysN > 0) {
+		savedKeys = new CKeyEntry[savedKeysN];
+		memcpy(savedKeys, keyArray.entries, sizeof(CKeyEntry) * savedKeysN);
+	}
+	if(savedMKeysN > 0) {
+		savedMKeys = new CKeyEntry[savedMKeysN];
+		memcpy(savedMKeys, mission_keyArray.entries, sizeof(CKeyEntry) * savedMKeysN);
+	}
+	if(savedDataN > 0) {
+		savedData = new wchar[savedDataN];
+		memcpy(savedData, data.chars, sizeof(wchar) * savedDataN);
+	}
+	if(savedMDataN > 0) {
+		savedMData = new wchar[savedMDataN];
+		memcpy(savedMData, mission_data.chars, sizeof(wchar) * savedMDataN);
+	}
+
+	Load(); // Unload() then parse the fresh file
+
+	if(keyArray.numEntries == 0 || data.numChars == 0) {
+		// broken or missing file: free any half-parsed tables and reinstall
+		// the backup (ownership of the backup arrays transfers to CText)
+		Unload();
+		keyArray.entries = savedKeys;           keyArray.numEntries = savedKeysN;
+		mission_keyArray.entries = savedMKeys;  mission_keyArray.numEntries = savedMKeysN;
+		data.chars = savedData;                 data.numChars = savedDataN;
+		mission_data.chars = savedMData;        mission_data.numChars = savedMDataN;
+		MissionTextOffsets = savedOffsets;
+		bHasMissionTextOffsets = savedHasOffsets;
+		bIsMissionTextLoaded = savedMissionLoaded;
+		memcpy(szMissionTableName, savedMission, sizeof(szMissionTableName));
+		return false;
+	}
+
+	// fresh tables are live; re-attach the mission text that was on screen
+	CMessages::ClearAllMessagesDisplayedByGame();
+	if(savedMissionLoaded && Mission_TableName_backup[0] && bHasMissionTextOffsets)
+		LoadMissionText(Mission_TableName_backup);
+
+	delete[] savedKeys;
+	delete[] savedMKeys;
+	delete[] savedData;
+	delete[] savedMData;
+	return true;
+}
+
+// Called once per frame. Polls the current language's GXT mtime every
+// 250ms; a change arms a 500ms-delayed reload so a mid-write editor save
+// does not get parsed half-way. The first tick only caches the mtime.
+void TextHotReloadTick(void)
+{
+	static char sTrackedPath[64] = "";
+	static uint64 sLastWrite = 0;
+	static uint32 sNextCheck = 0;
+	static uint32 sReloadAt = 0;
+	static bool sPending = false;
+
+	char path[64];
+	GxtFileNameForLanguage(path, FrontEndMenuManager.m_PrefsLanguage);
+	if(path[0] == 0)
+		return;
+
+	uint32 now = CTimer::GetTimeInMilliseconds();
+	if(strcmp(path, sTrackedPath) != 0) {
+		// first frame or the language switched in-game: re-anchor tracking
+		// on the new file without reloading it
+		strcpy(sTrackedPath, path);
+		sLastWrite = GxtFileTime(path);
+		sPending = false;
+		return;
+	}
+	if(now < sNextCheck)
+		return;
+	sNextCheck = now + 250;
+	if(!sPending) {
+		uint64 w = GxtFileTime(path);
+		if(w != sLastWrite) {
+			sLastWrite = w;
+			sPending = true;
+			sReloadAt = now + 500;
+		}
+	} else if(now >= sReloadAt) {
+		sPending = false;
+		TheText.ReloadFromDisk();
+	}
+}
+// ================================
 
 wchar*
 CText::Get(const char *key)
@@ -233,6 +385,7 @@ CText::LoadMissionText(char *MissionTableName)
 	char filename[32];
 	CMessages::ClearAllMessagesDisplayedByGame();
 	//处理一个疑似bug 重新加载语言不会重新加载任务文本
+
 	strcpy(Mission_TableName_backup, MissionTableName);
 	
 	mission_keyArray.Unload();
@@ -338,6 +491,7 @@ CText::AddKeyValue(const char *key, const wchar *value)
 	if(!key || !value) return false;
 
 	// 规范化 key（最多 7 字节），并转为大写以与 GXT 约定保持一致
+
 	char keybuf[8];
 	memset(keybuf, 0, sizeof(keybuf));
 	strncpy(keybuf, key, 7);
@@ -345,38 +499,46 @@ CText::AddKeyValue(const char *key, const wchar *value)
 	for(int i = 0; i < 7 && keybuf[i]; ++i) keybuf[i] = (char)toupper((unsigned char)keybuf[i]);
 
 	// 计算 value 长度（wchar 单元，不含终止符）
+
 	size_t valLen = std::wcslen((wchar_t *)value);
 
 	// 记录老数据基址与大小（用于非 FIX_BUGS 分支更新指针）
+
 	wchar *oldChars = data.chars;
 	int oldNumChars = data.numChars;
 
 	// 分配并复制新的 chars 缓冲区（包含终止符）
+
 	wchar *newChars = new wchar[oldNumChars + (int)valLen + 1];
 	if(oldChars) { std::memcpy(newChars, oldChars, oldNumChars * sizeof(wchar)); }
-	std::memcpy(newChars + oldNumChars, value, (valLen + 1) * sizeof(wchar)); // 含终止符
+std::memcpy(newChars + oldNumChars, value, (valLen + 1) * sizeof(wchar)); // 含终止符
 	data.chars = newChars;
 	data.numChars = oldNumChars + (int)valLen + 1;
 
 	// 构造新条目
+
 	CKeyEntry newEntry;
 	memset(&newEntry, 0, sizeof(newEntry));
 #if defined(FIX_BUGS) || defined(FIX_BUGS_64)
 	// Search 使用 (uint8*)data + valueOffset —— valueOffset 必须是字节偏移
+
 	newEntry.valueOffset = (uint32)(oldNumChars * sizeof(wchar));
 #else
 	// 非 FIX_BUGS 分支，entries 中存的是指针（所以直接设为新缓冲区对应指针）
+
 	newEntry.value = &data.chars[oldNumChars];
 #endif
 	std::memset(newEntry.key, 0, sizeof(newEntry.key));
 	std::strncpy(newEntry.key, keybuf, 7);
 
 	// 在 keyArray.entries 中按字典序插入 newEntry（保持排序）
+
 	int oldN = keyArray.numEntries;
 	CKeyEntry *oldEntries = keyArray.entries;
 	CKeyEntry *newEntries = new CKeyEntry[oldN + 1];
 
 	// 找到插入位置（按 strcmp，已将 key 转为大写）
+
 	int pos = 0;
 	while(pos < oldN && std::strncmp(oldEntries[pos].key, newEntry.key, 8) < 0) ++pos;
 
@@ -384,32 +546,39 @@ CText::AddKeyValue(const char *key, const wchar *value)
 	for(int i = 0; i < pos; ++i) newEntries[i] = oldEntries[i];
 
 	// 插入新条目
+
 	newEntries[pos] = newEntry;
 
 	// 复制后半部分
 	for(int i = pos; i < oldN; ++i) newEntries[i + 1] = oldEntries[i];
 
 	// 如果是非 FIX_BUGS（entries 存指针），需要修正所有条目的 value 指针指向新 chars：
+
 #if !defined(FIX_BUGS) && !defined(FIX_BUGS_64)
 	if(oldEntries) {
 		for(int i = 0; i < oldN + 1; ++i) {
 			// 只有当原来条目的 value 指针不为 nullptr 时才修正（newEntry 已正确）
+
 			if(i == pos) continue; // 新插入的已经正确
 			wchar *oldPtr = nullptr;
 			// 原来来自 oldEntries：但我们已把 oldEntries 内容复制到 newEntries
-			// 先从 oldEntries[i] 获取原始指针（注意越界）
-			// 当 i < pos 使用 oldEntries[i], 当 i > pos 使用 oldEntries[i-1]
+
+// 先从 oldEntries[i] 获取原始指针（注意越界）
+			// 当 i < pos 使用 oldEntries[i]，当 i > pos 使用 oldEntries[i-1]
 			int srcIndex = (i < pos) ? i : (i - 1);
+
 			oldPtr = oldEntries[srcIndex].value;
 			if(oldPtr) {
 				// 计算在旧缓冲区的字单元偏移（以字节差再除以 sizeof(wchar)）
+
 				ptrdiff_t byteOff = (uint8 *)oldPtr - (uint8 *)oldChars;
-				// 边界检查（防御性）
+// 边界检查（防御性）
 				if(byteOff >= 0 && byteOff % (intptr_t)sizeof(wchar) == 0) {
 					wchar *newPtr = (wchar *)((uint8 *)data.chars + byteOff);
 					newEntries[i].value = newPtr;
 				} else {
 					// 不可信的指针，置为 nullptr 避免访问
+
 					newEntries[i].value = nullptr;
 				}
 			}
@@ -418,8 +587,10 @@ CText::AddKeyValue(const char *key, const wchar *value)
 #endif
 
 	// 释放旧 entries、旧 chars
+
 	if(oldEntries) delete[] oldEntries;
 	if(oldChars) delete[] oldChars; // oldChars 已被复制到 newChars
+
 
 	keyArray.entries = newEntries;
 	keyArray.numEntries = oldN + 1;
