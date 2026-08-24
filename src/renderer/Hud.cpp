@@ -651,7 +651,7 @@ void CHud::Draw()
 					CFont::SetColor(ARMOUR_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f+20.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 						
 
 						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
@@ -1367,7 +1367,7 @@ void CHud::Draw()
 					CFont::SetBackgroundOn();
 					CFont::SetBackGroundOnlyTextOff();
 					CFont::SetDropShadowPosition(0);
-					CFont::SetBackgroundColor(CRGBA(12, 30, 38, fAlpha * 0.9f));
+					CFont::SetBackgroundColor(CRGBA(0, 0, 0, fAlpha * 0.9f));
 					CFont::SetColor(CRGBA(175, 175, 175, 255));
 					CFont::PrintString(SCREEN_SCALE_X(34.0f), SCREEN_SCALE_Y(28.0f + (150.0f - PagerXOffset) * 0.6f), m_HelpMessageToPrint);
 					CFont::SetAlphaFade(255.0f);

@@ -449,6 +449,17 @@ ScreenDroplets::SprayDrops(void)
 		}
 	}
 
+	for(i = 0; i < MAX_AUDIOPEDHIT; i++) { 
+		CAudioPedHit *blo = CAudioPedHit::Get(i);
+		if(blo->pParticleObject) {
+			 CVector dist = blo->pParticleObject->GetPosition() - ms_prevCamPos;
+			 if(dist.MagnitudeSqr() > 40.0f || 
+			    DotProduct(dist, ms_prevCamUp) < 0.0f) continue;
+
+			FillScreenMoving(1.0f, true);
+		}
+	}
+
 	static int ndrops[] = {
 		125, 250, 500, 1000, 1000,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0

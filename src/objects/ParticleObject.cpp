@@ -25,7 +25,11 @@ CParticleObject *CParticleObject::pUnusedListHead;
 
 CAudioHydrant List[MAX_AUDIOHYDRANTS];
 
+CAudioPedHit Listo[MAX_AUDIOPEDHIT]; 
+
 CAudioHydrant *CAudioHydrant::Get(int n) { return &List[n]; }
+
+CAudioPedHit *CAudioPedHit::Get(int n) { return &Listo[n]; }
 
 bool
 CAudioHydrant::Add(CParticleObject *particleobject)
@@ -50,6 +54,26 @@ CAudioHydrant::Add(CParticleObject *particleobject)
 	return false;
 }
 
+bool
+CAudioPedHit::Add(CParticleObject *particleobject) // ZAdd: #Blood droplets
+{
+	for(int32 i = 0; i < MAX_AUDIOPEDHIT; i++) {
+		if(Listo[i].AudioEntity == AEHANDLE_NONE) {
+			Listo[i].AudioEntity = DMAudio.CreateEntity(AUDIOTYPE_PHYSICAL, particleobject);
+
+			if(AEHANDLE_IS_FAILED(Listo[i].AudioEntity)) return false;
+
+			DMAudio.SetEntityStatus(Listo[i].AudioEntity, TRUE);
+
+			Listo[i].pParticleObject = particleobject;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void
 CAudioHydrant::Remove(CParticleObject *particleobject)
 {
@@ -60,6 +84,18 @@ CAudioHydrant::Remove(CParticleObject *particleobject)
 			DMAudio.DestroyEntity(List[i].AudioEntity);
 			List[i].AudioEntity = AEHANDLE_NONE;
 			List[i].pParticleObject = nil;
+		}
+	}
+}
+
+void
+CAudioPedHit::Remove(CParticleObject *particleobject) // ZAdd: #Blood droplets
+{
+	for(int32 i = 0; i < MAX_AUDIOPEDHIT; i++) {
+		if(Listo[i].pParticleObject == particleobject) {
+			DMAudio.DestroyEntity(Listo[i].AudioEntity);
+			Listo[i].AudioEntity = AEHANDLE_NONE;
+			Listo[i].pParticleObject = nil;
 		}
 	}
 }
@@ -359,6 +395,17 @@ CParticleObject::AddObject(uint16 type, CVector const &pos, CVector const &targe
 			pobj->m_nRemoveTimer     = CTimer::GetTimeInMilliseconds();
 			break;
 		}
+
+		case POBJECT_PED_HIT_BLOOD:
+	    {
+		    pobj->m_ParticleType     = PARTICLE_BLOOD;
+		    pobj->m_nNumEffectCycles = 0;
+		    pobj->m_nSkipFrames      = 1;
+		    pobj->m_nCreationChance  = 0;
+		    pobj->m_nRemoveTimer     = CTimer::GetTimeInMilliseconds();
+		    CAudioPedHit::Add(pobj);
+		    break;
+	    }
 	}
 	
 	return pobj;
@@ -481,6 +528,9 @@ void CParticleObject::UpdateClose(void)
 			{
 				if ( this->m_Type == POBJECT_FIRE_HYDRANT )
 					CAudioHydrant::Remove(this);
+
+				if(this->m_Type == POBJECT_PED_HIT_BLOOD) 
+					CAudioPedHit::Remove(this);
 				
 				MoveToList(&pCloseListHead, &pUnusedListHead, this);
 				this->m_nState = POBJECTSTATE_FREE;
@@ -1034,6 +1084,9 @@ void CParticleObject::UpdateClose(void)
 
 		if ( this->m_Type == POBJECT_FIRE_HYDRANT )
 			CAudioHydrant::Remove(this);
+
+		if ( this->m_Type == POBJECT_PED_HIT_BLOOD ) 
+			CAudioPedHit::Remove(this);
 	}
 }
 
@@ -1047,6 +1100,9 @@ CParticleObject::UpdateFar(void)
 		
 		if ( this->m_Type == POBJECT_FIRE_HYDRANT )
 			CAudioHydrant::Remove(this);
+
+		if ( this->m_Type == POBJECT_PED_HIT_BLOOD )
+			CAudioPedHit::Remove(this);
 	}
 	
 	CVector2D dist = this->GetPosition() - TheCamera.GetPosition();
