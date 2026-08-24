@@ -1,7 +1,10 @@
 find_package(Threads REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-file(GLOB_RECURSE ${PROJECT}_SOURCES "*.cpp" "*.h" "*.rc")
+# CONFIGURE_DEPENDS makes CMake re-scan the glob on every build, so newly
+# added source files (e.g. CHSFont_dwrite.cpp) are picked up automatically
+# without having to re-run configure manually.
+file(GLOB_RECURSE ${PROJECT}_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.h" "*.rc")
 
 function(header_directories RETURN_LIST)
     file(GLOB_RECURSE ALL_SRCS *.h *.cpp *.c)
@@ -42,7 +45,7 @@ target_compile_definitions(${EXECUTABLE}
         CMAKE_NO_AUTOLINK
 )
 
-if(LIBRW_PLATFORM_D3D9)
+if(LIBRW_PLATFORM STREQUAL "D3D9")
     target_compile_definitions(${EXECUTABLE}
         PUBLIC
             USE_D3D9
@@ -53,6 +56,14 @@ target_compile_definitions(${EXECUTABLE} PRIVATE CMAKE_BUILD)
 target_compile_definitions(${EXECUTABLE} PRIVATE USE_OUR_VERSIONING)
 
 if(${PROJECT}_AUDIO STREQUAL "OAL")
+    # 从本地 vendor 目录加载 OpenAL
+    set(OPENAL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/vendor/openal-soft/include")
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(OPENAL_LIBRARY "${CMAKE_SOURCE_DIR}/vendor/openal-soft/libs/Win64/OpenAL32.lib")
+    else()
+        set(OPENAL_LIBRARY "${CMAKE_SOURCE_DIR}/vendor/openal-soft/libs/Win32/OpenAL32.lib")
+    endif()
+
     find_package(OpenAL REQUIRED)
     if(TARGET OpenAL::OpenAL)
         target_link_libraries(${EXECUTABLE} PRIVATE OpenAL::OpenAL)
@@ -66,6 +77,14 @@ elseif(${PROJECT}_AUDIO STREQUAL "MSS")
     find_package(MilesSDK REQUIRED)
     target_compile_definitions(${EXECUTABLE} PRIVATE AUDIO_MSS)
     target_link_libraries(${EXECUTABLE} PRIVATE MilesSDK::MilesSDK)
+endif()
+
+set(mpg123_DIR "${CMAKE_SOURCE_DIR}/vendor/mpg123")
+set(mpg123_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/vendor/mpg123/include")
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(mpg123_LIBRARIES "${CMAKE_SOURCE_DIR}/vendor/mpg123/lib/Win64/libmpg123-0.lib")
+else()
+    set(mpg123_LIBRARIES "${CMAKE_SOURCE_DIR}/vendor/mpg123/lib/Win32/libmpg123-0.lib")
 endif()
 
 find_package(mpg123 REQUIRED)
@@ -151,7 +170,7 @@ set_target_properties(${EXECUTABLE}
         C_STANDARD 11
         C_EXTENSIONS ${${PROJECT}_C_CXX_EXTENSIONS}
         C_STANDARD_REQUIRED ON
-        CXX_STANDARD 11
+        CXX_STANDARD 17
         CXX_EXTENSIONS ${${PROJECT}_C_CXX_EXTENSIONS}
         CXX_STANDARD_REQUIRED ON
 )

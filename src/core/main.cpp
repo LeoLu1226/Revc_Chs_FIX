@@ -1,4 +1,4 @@
-﻿#include "common.h"
+#include "common.h"
 #include <time.h>
 #include "rpmatfx.h"
 #include "rphanim.h"

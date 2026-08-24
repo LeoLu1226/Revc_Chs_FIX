@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Sprite2d.h"
 
@@ -162,8 +162,9 @@ public:
 	static void Initialise(void);
 	static void Shutdown(void);
 	static void InitPerFrame(void);
-	static void PrintCharDispatcher(float arg_x, float arg_y, wchar arg_char);
-	static void PrintCHSChar(float arg_x, float arg_y, wchar arg_char);
+	// arg_char 是码点：BMP 内 0-0xFFFF 直接用，补充平面为代理对合并后的 32 位码点
+	static void PrintCharDispatcher(float arg_x, float arg_y, uint32 arg_char);
+	static void PrintCHSChar(float arg_x, float arg_y, uint32 arg_char);
 	static void PrintChar(float x, float y, wchar c);
 	static void PrintString_Chs(float arg_x, float arg_y, wchar *arg_text);
 	static void PrintString(float x, float y, wchar *s);

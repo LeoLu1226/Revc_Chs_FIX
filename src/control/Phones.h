@@ -55,9 +55,9 @@ public:
 	bool IsMessageBeingDisplayed(int);
 	void Load(uint8 *buf, uint32 size);
 	void Save(uint8 *buf, uint32 *size);
-	//Ö»ĞèÒ»´Î
+	//åªéœ€ä¸€æ¬¡
 	void SetPhoneMessage_JustOnce(int phoneId, wchar *msg1, wchar *msg2, wchar *msg3, wchar *msg4, wchar *msg5, wchar *msg6);
-	//·´¸´
+	//åå¤
 	void SetPhoneMessage_Repeatedly(int phoneId, wchar *msg1, wchar *msg2, wchar *msg3, wchar *msg4, wchar *msg5, wchar *msg6);
 	int GrabPhone(float, float);
 	void Initialise(void);

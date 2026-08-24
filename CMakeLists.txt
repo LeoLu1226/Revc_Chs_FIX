@@ -4,6 +4,20 @@ set(EXECUTABLE reVC)
 set(PROJECT REVC)
 
 project(${EXECUTABLE} C CXX)
+
+if(MSVC)
+    message(STATUS "Using MSVC")
+    # All project sources are UTF-8 (no BOM) after the encoding unification;
+    # /utf-8 makes cl read them as UTF-8 instead of the system ANSI code page.
+    add_compile_options("/utf-8")
+    add_compile_options("/wd4819")
+    # vendor code (librw etc.) may contain non-UTF-8 bytes; silence the
+    # invalid-character warning those trigger under /utf-8.
+    add_compile_options("/wd4828")
+    string(REPLACE "/showIncludes" "" CMAKE_DEPFILE_FLAGS_C "${CMAKE_DEPFILE_FLAGS_C}")
+    string(REPLACE "/showIncludes" "" CMAKE_DEPFILE_FLAGS_CXX "${CMAKE_DEPFILE_FLAGS_CXX}")
+endif()
+
 set(${PROJECT}_AUTHOR "${PROJECT} Team")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 

@@ -1,4 +1,4 @@
-﻿#include "common.h"
+#include "common.h"
 
 #include "Font.h"
 #include "Sprite2d.h"
@@ -7,6 +7,8 @@
 #include "FileMgr.h"
 #endif
 #include "Timer.h"
+// CHSFont.h 提供 CharPos（全平台）；CHSFont 动态字库类以 _WIN32
+#include "CHSFont.h"
 
 
 
@@ -274,18 +276,33 @@ int CFont::ButtonsSlot = -1;
 // 中文支持
 #include <cstdio>
 #include <cstdlib>
-struct CharPos {
-	unsigned char rowIndex;
-	unsigned char columnIndex;
-};
+// CharPos 定义移入 CHSFont.h（新增 page 字段支持多页动态字库），静态表仅存 BMP
+
 //#include "../../build/NewFont.h"
 #include "array"
 static std::array<CharPos, 0x10000> sTable;
+// 非动态路径下补充平面码点（=0x10000）的占位（静态表只有 BMP）
+static CharPos sBmpFallbackSlot = { 0, 63, 63 };
+
+// Zero-width characters (ZWJ/ZWNJ/variation selectors): occupy no space and
+// are not rendered. They glue emoji sequences together (e.g. man + ZWJ +
+// laptop); we simply hide them since stb/GDI cannot compose sequences.
+static inline bool
+IsZeroWidthChar(wchar c)
+{
+	return c == 0x200C || c == 0x200D || (c >= 0xFE00 && c <= 0xFE0F);
+}
 
 const CharPos &
-GetCharPos(wchar chr)
+GetCharPos(uint32 chr, bool slant)
 {
-	return sTable[chr];
+#ifdef _WIN32
+	if(CHSFont::Inited())
+		return CHSFont::GetSlot(chr, slant); // 动态字库：按需渲染，永不少字
+#endif
+	if(chr < 0x10000)
+		return sTable[chr];
+	return sBmpFallbackSlot;
 }
 
 // 读表
@@ -293,7 +310,7 @@ bool ReadTable()
 {
 	// if(sTable.size() > 0) { sTable.}
 
-	sTable.fill({63, 63});
+	sTable.fill({0, 63, 63});
 
 	FILE *hfile = std::fopen("data/Chinese.dat", "rb");
 
@@ -315,11 +332,17 @@ bool ReadTable()
 
 void CFont::Initialise(void)
 {
+#ifdef _WIN32
+	// 无条件确保 reVC.ini 存在 [Fonts] 配置（缺则写入默认，写不了则崩溃）。
+// 独立于语言/Init，保证任何启动路径都会先落盘字体配置。
+	CHSFont::EnsureConfig();
+#endif
 	
 	int slot,chsslot;
 
 	slot = CTxdStore::AddTxdSlot("fonts");
 	chsslot = CTxdStore::AddTxdSlot("chsfonts");
+		CTxdStore::AddRef(chsslot); // keep ref>0 so CGame::ShutDown()->GameShutdown() won't free it
 #ifdef MORE_LANGUAGES
 	Slot = slot;
 	chs_Slot = chsslot;
@@ -332,6 +355,11 @@ void CFont::Initialise(void)
 	case FONT_LANGSET_CHINESE: CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD"); break;
 	}
 	if(IsChinese()) {
+#ifdef _WIN32
+		if(CHSFont::Init()) {
+// 动态字库就够了，无需 Chinese.dat
+		} else
+#endif
 		if(!ReadTable()) {
 			LanguageSet = 0;
 			// CCTxdStore::RemoveTxd(slot);
@@ -380,18 +408,23 @@ void CFont::Initialise(void)
 
 
 	if(IsChinese()) {
-		CTxdStore::LoadTxd(chs_Slot, "MODELS/CHINESE.TXD");
-		CTxdStore::AddRef(chs_Slot);
-		CTxdStore::PushCurrentTxd();
-		CTxdStore::SetCurrentTxd(chs_Slot);
-		//Sprite_C[0].SetTexture(newFont.GetAtlasTexture());
-		//Sprite_C[1].SetTexture(newFont.GetAtlasTexture());
+#ifdef _WIN32
+		if(!CHSFont::Inited())
+#endif
+		{
+			CTxdStore::LoadTxd(chs_Slot, "MODELS/CHINESE.TXD");
+			CTxdStore::AddRef(chs_Slot);
+			CTxdStore::PushCurrentTxd();
+			CTxdStore::SetCurrentTxd(chs_Slot);
+			//Sprite_C[0].SetTexture(newFont.GetAtlasTexture());
+			//Sprite_C[1].SetTexture(newFont.GetAtlasTexture());
 
-		Sprite_C[0].SetTexture("normal", "normalm");
-		Sprite_C[1].SetTexture("slant", "slantm");
+			Sprite_C[0].SetTexture("normal", "normalm");
+			Sprite_C[1].SetTexture("slant", "slantm");
 
-		
-		CTxdStore::PopCurrentTxd();
+			
+			CTxdStore::PopCurrentTxd();
+		}
 	}
 
 #if !defined(GAMEPAD_MENU) && defined(BUTTON_ICONS)
@@ -445,7 +478,7 @@ CFont::LoadButtons(const char *txdPath)
 }
 #endif // BUTTON_ICONS
 
-//彩蛋变量1
+//褰╄泲鍙橀噺1
 uint8 clickNUM = 0;
 
 #ifdef MORE_LANGUAGES
@@ -460,7 +493,13 @@ CFont::ReloadFonts(uint8 set)
 		if(IsJapanese()) Sprite[2].Delete();
 
 		if(IsChinese()) {
+#ifdef _WIN32
+			if(!CHSFont::Init()) {
+				if(!ReadTable()) { LanguageSet = 0; }
+			}
+#else
 			if(!ReadTable()) { LanguageSet = 0; }
+#endif
 
 			Sprite[2].Delete();
 			Sprite[3].Delete();
@@ -483,28 +522,40 @@ CFont::ReloadFonts(uint8 set)
 		Sprite[0].SetTexture("font2", "font2m");
 		Sprite[1].SetTexture("font1", "font1m");
 
-			if(!ReadTable()) {
-			LanguageSet = 0;
-		} else {
-			CTxdStore::PopCurrentTxd();
+		if(set == FONT_LANGSET_CHINESE) {
+#ifdef _WIN32
+			if(CHSFont::Inited()) {
+				// 动态字库模式：无需 CHINESE.TXD，当前 TXD 保持为 Slot
+			} else
+#endif
+			{
+				if(!ReadTable()) {
+					LanguageSet = 0;
+				} else {
+					CTxdStore::PopCurrentTxd();
 
-			// Sprite_C[0].Delete();
-			// Sprite_C[1].Delete();
-			CTxdStore::RemoveTxd(chs_Slot);
-			CTxdStore::LoadTxd(chs_Slot, "MODELS/CHINESE.TXD");
-			CTxdStore::PushCurrentTxd();
-			CTxdStore::SetCurrentTxd(chs_Slot);
-			Sprite_C[0].SetTexture("normal", "normalm");
-			Sprite_C[1].SetTexture("slant", "slantm");
+					// Sprite_C[0].Delete();
+					// Sprite_C[1].Delete();
+					CTxdStore::RemoveTxd(chs_Slot);
+					CTxdStore::LoadTxd(chs_Slot, "MODELS/CHINESE.TXD");
+					CTxdStore::PushCurrentTxd();
+					CTxdStore::SetCurrentTxd(chs_Slot);
+					Sprite_C[0].SetTexture("normal", "normalm");
+					Sprite_C[1].SetTexture("slant", "slantm");
 
-			
-			// CCTxdStore::PopCurrentTxd();
+					
+					// CCTxdStore::PopCurrentTxd();
+				}
+			}
 		}
-		
 
 		if(set == FONT_LANGSET_JAPANESE) { Sprite[2].SetTexture("FONTJAP", "FONTJAP_mask"); }
 
 		CTxdStore::PopCurrentTxd();
+#ifdef _WIN32
+		if(set != FONT_LANGSET_CHINESE)
+			CHSFont::Shutdown();
+#endif
 	}
 	LanguageSet = set;
 	//if(clickNUM < 6) { clickNUM++; }
@@ -523,6 +574,9 @@ CFont::Shutdown(void)
 #endif
 	Sprite[0].Delete();
 	Sprite[1].Delete();
+#ifdef _WIN32
+	CHSFont::Shutdown(); // 动态字库（清空）
+#endif
 #ifdef MORE_LANGUAGES
 	if(IsJapanese()) Sprite[3].Delete();
 	if(IsChinese()) {
@@ -588,18 +642,18 @@ CFont::DrawButton(float x, float y)
 #endif
 
 void
-CFont::PrintCharDispatcher(float arg_x, float arg_y, wchar arg_char)
+CFont::PrintCharDispatcher(float arg_x, float arg_y, uint32 arg_char)
 {
 	//if (arg_char== L'{'|| arg_char == L'>' || arg_char == L'<') {
 	if(arg_char < 0x80) {
 		//wchar s[2] = {arg_char, '\0'};
 	
-		
-		arg_char -= 0x20;
-		if(RenderState.bFontHalfTexture) { arg_char = FindNewCharacter(arg_char); }
+		wchar ascii = (wchar)(arg_char - 0x20);
+		if(RenderState.bFontHalfTexture) { ascii = FindNewCharacter(ascii); }
 
 		
-		PrintChar(arg_x, arg_y, arg_char); // 加128钱数显示文本正常
+		PrintChar(arg_x, arg_y, ascii); // 加128钱数显示文本正常
+
 
 	} else {
 		PrintCHSChar(arg_x, arg_y, arg_char);
@@ -609,9 +663,8 @@ CFont::PrintCharDispatcher(float arg_x, float arg_y, wchar arg_char)
 		//CSprite2d::RenderVertexBuffer();
 	}
 }
-
 void
-CFont::PrintCHSChar(float arg_x, float arg_y, wchar arg_char)
+CFont::PrintCHSChar(float arg_x, float arg_y, uint32 arg_char)
 {
 	
 
@@ -639,7 +692,9 @@ CFont::PrintCHSChar(float arg_x, float arg_y, wchar arg_char)
 
 	int zzzz = RsGlobal.width;
 
-	pos = GetCharPos(arg_char);
+	// 一个渲染批次项：c 是码点（BMP 内 0-0xFFFF 直接画，补充平面是代理对合并后的 32 位码点）
+
+	pos = GetCharPos(arg_char, RenderState.style == 0);
 
 	yOffset = RenderState.scaleY * 2.0f;
 
@@ -866,13 +921,17 @@ CFont::RenderFontBuffer()
 	FontRenderStatePointer.pRenderState = (CFontRenderState *)FontRenderStateBuf;
 }
 #include <unordered_map>
+// 一个渲染批次项：c 是码点（BMP 内 0-0xFFFF 直接画，补充平面是代理对合并后的 32 位码点）
 struct FontBatch
 {
 	CVector2D pos;
-	wchar c;
+	uint32 c;
 
 	CFontRenderState renderState;
 	CFontDetails details;
+	// COLOR glyph (COLR/CPAL emoji): the atlas cell holds real RGBA data that
+	// must NOT be vertex-color modulated (draw with white RGB, alpha kept).
+	bool isColor;
 };
 //std::vector<FontBatch> gFontBatches;
 std::unordered_map<CSprite2d*, std::vector<FontBatch>> gFontBatches;
@@ -988,21 +1047,49 @@ CFont::RenderFontBuffer_Chs()
 		// var_char = *pbuffer.ptext;
 		var_char = *pRenderStateBufPointer.pStr;
 
+		// 代理对合并：高代理（0xD800-0xDBFF）+ 低代理（0xDC00-0xDFFF）→ 32 位码点
+		uint32 chsCp = var_char;
+		bool chsSkipLow = false;
+		if(var_char >= 0xD800 && var_char <= 0xDBFF) {
+			wchar next = *(pRenderStateBufPointer.pStr + 1);
+			if(next >= 0xDC00 && next <= 0xDFFF) {
+				chsCp = 0x10000 + ((uint32)(var_char - 0xD800) << 10) + (uint32)(next - 0xDC00);
+				chsSkipLow = true;
+			}
+		}
+
+		// Zero-width (ZWJ/variation selectors): not rendered, no advance
+		if(IsZeroWidthChar(var_char)) {
+			++*pRenderStateBufPointer.pStr;
+			continue;
+		}
 		if(var_char < 0x80) {
 			// CSprite2d::SetRenderState(&Sprite[RenderState->FontStyle], 0);
 			//Sprite[RenderState.style].SetRenderState();
-			gFontBatches[&Sprite[RenderState.style]].push_back({ pos,c,RenderState,Details });
+			gFontBatches[&Sprite[RenderState.style]].push_back({ pos,(uint32)c,RenderState,Details });
 
 			if (bBold) {
-				gFontBatches[&Sprite[RenderState.style]].push_back({ CVector2D(pos.x + 1.0f, pos.y),c,RenderState,Details });
-				gFontBatches[&Sprite[RenderState.style]].push_back({ CVector2D(pos.x + 2.0f, pos.y),c,RenderState,Details });
+				gFontBatches[&Sprite[RenderState.style]].push_back({ CVector2D(pos.x + 1.0f, pos.y),(uint32)c,RenderState,Details });
+				gFontBatches[&Sprite[RenderState.style]].push_back({ CVector2D(pos.x + 2.0f, pos.y),(uint32)c,RenderState,Details });
 				pos.x += 2.0f;
 			}
 	
 		} else {
-
-
-			
+#ifdef _WIN32
+			if(CHSFont::Inited()) {
+				// dynamic font: FONT_BANK(style==0) -> slant page, else normal page
+				CharPos cpos = GetCharPos(chsCp, RenderState.style == 0);
+				CSprite2d *chsSpr = &CHSFont::SpriteC[cpos.page];
+				gFontBatches[chsSpr].push_back({pos, chsCp, RenderState, Details, CHSFont::IsSlotColor(chsCp, RenderState.style == 0) });
+				if(bBold) {
+					gFontBatches[chsSpr].push_back({ CVector2D(pos.x + 1.0f, pos.y), chsCp, RenderState, Details });
+					gFontBatches[chsSpr].push_back({ CVector2D(pos.x + 2.0f, pos.y), chsCp, RenderState, Details });
+					pos.x += 2.0f;
+				}
+			}
+			else
+#endif
+			{
 				if(RenderState.style != 0) {
 
 					gFontBatches[&Sprite_C[0]].push_back({pos,c,RenderState,Details });
@@ -1014,10 +1101,11 @@ CFont::RenderFontBuffer_Chs()
 					}
 				//Sprite_C[0].SetRenderState();
 
-			} else {
 				// CSprite2d::fpSetRenderState.fun(&ChsSlantSprite, 0);
 				// 暂时注释
+
 				// Sprite[3].SetRenderState();
+			} else {
 					gFontBatches[&Sprite_C[1]].push_back({ pos,c,RenderState,Details });
 					if (bBold) {
 						gFontBatches[&Sprite_C[1]].push_back({ CVector2D(pos.x + 1.0f, pos.y),c,RenderState,Details });
@@ -1025,6 +1113,7 @@ CFont::RenderFontBuffer_Chs()
 						pos.x += 2.0f;
 					}
 				//Sprite_C[1].SetRenderState();
+			}
 			}
 		}
 
@@ -1035,6 +1124,10 @@ CFont::RenderFontBuffer_Chs()
 		if(c == '\0') { pos.x += RenderState.fExtraSpace; }
 
 		++*pRenderStateBufPointer.pStr;
+
+// 代理对：额外跳过低代理（for 循环自增一次，这里再增一次共前进 2）
+		if(chsSkipLow)
+			pRenderStateBufPointer.pStr++;
 
 #ifdef FIX_BUGS
 		// PS2 uses different chars for some symbols
@@ -1053,6 +1146,17 @@ CFont::RenderFontBuffer_Chs()
 		for(auto &item : batch.second) {
 			RenderState = item.renderState;
 			Details = item.details;
+			// COLOR glyphs (COLR/CPAL emoji) carry real RGBA in the atlas. The
+			// MAIN pass must draw them unmodulated (white RGB) or the vertex color
+			// tints the emoji. SHADOW passes however keep the caller's dark color:
+			// multiplying the color pixels by it turns the emoji into a dark
+			// silhouette, which is exactly what a drop shadow should look like.
+			// Alpha is always kept so shadows/fades still fade the whole glyph.
+			if(item.isColor && !RenderState.bIsShadow) {
+				RenderState.color.r = 255;
+				RenderState.color.g = 255;
+				RenderState.color.b = 255;
+			}
 			PrintCharDispatcher(item.pos.x, item.pos.y, item.c);
 			
 		}
@@ -1301,12 +1405,14 @@ void CFont::PrintString_Chs(float arg_x, float arg_y, wchar *arg_text)
 #include <string>
 #include<locale>
 // 将 wchar* 转换为 std::wstring 的工具函数
+
 static std::wstring
 WcharTOWstring(const wchar *ws)
 {
 	if(!ws) return std::wstring();
 	// wchar 可能是 uint16_t，std::wstring 构造函数需要 wchar_t*
-	// 这里假设 wchar 与 wchar_t 兼容，否则需要逐字符转换
+
+// 这里假设 wchar 与 wchar_t 兼容，否则需要逐字符转换
 	return std::wstring(reinterpret_cast<const wchar_t *>(ws));
 }
 void CFont::PrintString(float xstart, float ystart, wchar *s)
@@ -1319,9 +1425,10 @@ void CFont::PrintString(float xstart, float ystart, wchar *s)
 		
 		// int a = sizeof( wchar_t);
 		// wchar_t *ww = L"你";
+
 		// int b = ww[0];
 		//  font.RenderText(s, &tfont, xstart, ystart, 0.8, Details.color);
-		// font.RenderText(NewFont::WstringTOWchar(L"你好aaa"), &tfont, 0, 0, 0.8, Details.color);
+		// font.RenderText(NewFont::WstringTOWchar(L"浣犲ソaaa"), &tfont, 0, 0, 0.8, Details.color);
 		PrintString_Chs(xstart, ystart, s);
 		
 		// font.RenderText(s, &tfont, xstart, ystart, 0.8, Details.color);
@@ -1797,7 +1904,13 @@ float CFont::GetStringWidth_Chs(wchar *s, bool spaces)
 		} else if(*s < 0x80) {
 			result += GetCharacterSizeNormal(*s);
 		} else {
+		if(IsZeroWidthChar(*s)) { ++s; continue; }
 			if(result == 0.0f || spaces) { result += GetCharacterSizeNormal(*s); }
+
+			// surrogate pair: high+low occupy one full-width cell, skip low
+			if(*s >= 0xD800 && *s <= 0xDBFF && s[1] >= 0xDC00 && s[1] <= 0xDFFF) {
+				++s;
+			}
 
 			if(!spaces) { break; }
 		}
@@ -1928,7 +2041,14 @@ CFont::GetNextSpace_Chs(wchar *s)
 				break;
 			}
 		} else if(*temp >= 0x80) {
-			if(temp == s) { ++temp; }
+			if(temp == s) {
+				// 代理对：整个对作为一个字消耗，跳过 2 个 wchar
+				if(*temp >= 0xD800 && *temp <= 0xDBFF && temp[1] >= 0xDC00 && temp[1] <= 0xDFFF)
+					temp += 2;
+				else
+					++temp;
+		if(IsZeroWidthChar(*temp)) { ++temp; continue; }
+			}
 
 			break;
 		}

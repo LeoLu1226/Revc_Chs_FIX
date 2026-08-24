@@ -187,7 +187,7 @@ public:
 	static CMouseControllerState OldMouseControllerState;
 	static CMouseControllerState NewMouseControllerState;
 	static CMouseControllerState PCTempMouseControllerState;
-	static bool DisableMouseController; // 禁用鼠标事件
+	static bool DisableMouseController; // 绂佺敤榧犳爣浜嬩欢
 	
 	
 #ifdef GTA_PS2_STUFF

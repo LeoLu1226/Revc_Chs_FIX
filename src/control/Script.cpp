@@ -1,4 +1,4 @@
-﻿#include "common.h"
+#include "common.h"
 
 #include "Script.h"
 #include "ScriptCommands.h"

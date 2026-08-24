@@ -1,36 +1,91 @@
-本Fork基于reVC_CHS修复了以下问题：  
 
-1.修复汽车发动机的启动声音播放异常的问题  
-2.补全CHS版缺失的autoconf文件夹  
-3.修复CHS版护甲数字错位的问题  
-4.修复CHS版左上角提示信息背景颜色不正确的问题  
-5.补全CHS版缺失的shaders  
-6.删除CHS版多余源码副本  
-7.将帧数限制器从锁30帧调整为锁60帧  
-8.恢复了原版VC的血液屏幕效果  
-9.修复了霰弹枪换弹声音播放异常的问题  
-10.修复了开始新游戏时会重置鼠标灵敏度的问题  
-11.修复了鼠标水平竖直灵敏度不一致的问题  
-12.启用了PS2加载动画  
-&nbsp;
-编译时记得右键解决方案资源管理器中的reVC，并将C语言调整为17版，否则会编译错误  
-&nbsp;  
-如果需要OpenGL方案请下载3.3.2的SDK https://github.com/glfw/glfw/releases/tag/3.3.2  
-确保目录如下: re3/vendor/glfw-3.3.2.bin.WIN64   
-&nbsp;  
-如果方案中有OpenAL(oal)请将:  
-vendor/openal-soft/dist/Win64(或32，取决于你编译版本)/OpenAL32.dll  
-vendor/mpg123/dist/Win64(或32，取决于你编译版本)/libmpg123-0.dll  
-vendor/libsndfile/dist/Win64(或32，取决于你编译版本)/libsndfile-1.dll  
-这三个文件复制到游戏根目录中，否则游戏无法启动  
- &nbsp; 
-************************************************************************
-&nbsp;   
-# reVC的中文化支持和CLEO支持  
-中文已经好了，gamefiles文件夹里面已经包含无名的文本和贴图了(chinese_text_file文件夹)，自己复制到游戏目录   
-CLEO已经支持，部分涉及读写内存的我没实现，因为和原版不兼容了，有需要的可以根据cleo的源码自行添加 其他的应该都支持了  
-&nbsp;
-<img src="https://github.com/mrxenginner/reVC/blob/miami/res/images/logo_1024.png?raw=true" alt="reVC logo" width="200">
+# Revc的中文化支持和cleo支持
+
+汉化作者：Ova1122（gamefiles 中文文本与贴图来自无名汉化组）
+
+中文的已经好了 gamefiles文件夹里面已经包含无名的文本和贴图了 自己复制到游戏目录  
+cleo下次更新会加入  
+
+CLEO已经支持，部分涉及读写内存的我没实现，因为和原版不兼容了，有需要的可以根据cleo的源码自行添加 其他的应该都支持了
+
+## 汉化特性（CHSFont）
+
+* 动态字库：任意中文 + 扩展平面（生僻字 U+30EDE「𰻞」、Emoji）都能显示，永不缺字
+* 三种文本渲染模式（[Fonts] `TextRenderer=1/2/3`）：静态 CHINESE.TXD / GDI 动态字库 / DirectWrite（默认，最完善）
+* 彩色表情符号（COLR/CPAL）与 emoji 右剪修复
+* 可变字重：`NormalWeight` / `SlantWeight` / `RareWeight`（100–900，可自动保存回写 reVC.ini）
+* GXT 热重载：修改任意语言文本约 1 秒自动生效（开发调试用）
+
+## 文本渲染模式与字体配置（GDI / DirectWrite）
+
+所有字体相关配置都在游戏目录的 `reVC.ini` 的 `[Fonts]` 段，**改完需重启游戏生效**（启动时读取）。
+
+### 三种渲染模式
+
+| `TextRenderer` | 模式 | 说明 |
+|---|---|---|
+| `3` | **DirectWrite（默认，推荐）** | 动态字库。任意中文 + 生僻字（𰻞 U+30EDE 等扩展平面）+ 彩色 Emoji（COLR/CPAL）+ 可变字重，全部支持 |
+| `2` | **GDI** | GDI `GetGlyphOutlineW` 动态字库，兼容老机器；不支持彩色 Emoji 与可变字重轴 |
+| `1` | **TXD（最老）** | 静态 `MODELS\CHINESE.TXD` + `Chinese.dat` 贴图字库（即 gamefiles/chinese_text_file 里那套），无动态能力 |
+
+也兼容旧写法的字符串值（`TXD` / `GDI`），写错或缺失时自动回退到 DirectWrite。
+
+> 以下示例中的 `<…>` 均为占位符，请替换为你**本机已安装**或**有权分发**的字体。本仓库不捆绑任何字体文件；只额外列了 Windows 自带字体作为"开箱可用"的参考。
+
+### DirectWrite 模式（推荐配置示例）
+
+```ini
+[Fonts]
+TextRenderer=3
+NormalFonts=<主字体名>          ; 系统已安装的字体名，或 models 目录下的 .ttf（如微软雅黑填 msyh）
+NormalBold=1                    ; 1 = 默认用粗体字重（700）
+SlantFontFile=models\<斜体字体>.ttf   ; 斜体（意大利体）字体；可不配，缺省用主字体的伪斜体
+SlantBold=0
+GlyphHeight=56                  ; 字格高度（像素），越大笔画越细
+RareFontFile=<主字体文件>,<补充字体…>  ; 兜底字体链（见下）
+```
+
+- **`RareFontFile` 兜底链**：逗号分隔多个字体文件，从左到右依次尝试。主字体**缺字形的任何码位**（生僻字、Emoji、韩文、BMP 缺字）都会按链查找，第一个能画出该字的字体生效——所以"永不缺字"靠的就是它。按需补充 Windows **自带**字体即可：
+  - 彩色 Emoji：`C:\Windows\Fonts\seguiemj.ttf`（COLR/CPAL 彩色，Win8.1+ 自带）
+  - 韩文：`C:\Windows\Fonts\malgun.ttf`
+  - 生僻字（如 𰻞）：`C:\Windows\Fonts\SimsunExtG.ttf`
+  - 主字体缺的简中字形：`C:\Windows\Fonts\msyh.ttc`（微软雅黑）
+- **可变字重**：`NormalWeight=100~900`（对应 NormalFonts 的粗细，默认 400），`SlantWeight`、`RareWeight` 同理；`NormalBold=1` 时默认字重为 700。这些键会自动写回 `reVC.ini`（不需要手动补）。
+
+### GDI 模式
+
+```ini
+[Fonts]
+TextRenderer=2
+NormalFonts=<主字体名>
+SlantFontFile=models\<斜体字体>.ttf
+GlyphHeight=56
+RareFontFile=<主字体文件>,<补充字体…>
+```
+
+GDI 模式也能显示全部码位（超出 BMP 的走 stb_truetype 兜底链），只是没有彩色 Emoji 和字重轴。
+
+### TXD 模式
+
+```ini
+[Fonts]
+TextRenderer=1
+```
+
+需要把 `gamefiles/chinese_text_file/` 下的 `MODELS\CHINESE.TXD` 与 `Chinese.dat` 放进游戏目录对应位置（其余两种模式不需要它们）。
+
+### GXT 热重载（开发调试）
+
+改完 GXT 文本不用重启：游戏运行中保存 `TEXT\xx.GXT`（xx = 当前语言），约 1 秒后自动生效；切换语言会自动跟随新的语言文件；GXT 损坏时自动回滚不崩溃。仅影响文本，不影响 `[Fonts]`（字体配置仍要重启生效）。
+
+### 调试日志
+
+启动时会在游戏 exe 旁生成 `chsfont.log`，记录字体加载/渲染回退过程；字显示不出来时先看它。字体文件版权归各自作者所有，本仓库不包含任何字体文件。
+
+
+
+
+<img src="https://github.com/GTAmodding/re3/blob/miami/logo.png?raw=true" alt="reVC logo" width="200">
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FGTAmodding%2Fre3%2Fbadge%3Fref%3Dmiami&style=flat)](https://actions-badge.atrox.dev/GTAmodding/re3/goto?ref=miami)
 <a href="https://discord.gg/ERYg58ttcE"><img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" /></a>
