@@ -54,6 +54,27 @@
 #define MAX_SUBSYSTEMS		(16)
 
 static RwBool		  ForegroundApp = TRUE;
+static RwBool		  SystemCursorHidden = FALSE;
+
+static void
+HideSystemCursor(void)
+{
+	if(!SystemCursorHidden) {
+		while(ShowCursor(FALSE) >= 0) {}
+		SystemCursorHidden = TRUE;
+	}
+	SetCursor(nil);
+}
+
+static void
+RestoreSystemCursor(void)
+{
+	if(SystemCursorHidden) {
+		while(ShowCursor(TRUE) < 0) {}
+		SystemCursorHidden = FALSE;
+	}
+	SetCursor(LoadCursor(nil, IDC_ARROW));
+}
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -971,11 +992,11 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		case WM_SETCURSOR:
 		{
-			ShowCursor(FALSE);
-			
-			SetCursor(nil);
-			
-			break; // is this correct ?
+			if(GetForegroundWindow() == window)
+				HideSystemCursor();
+			else
+				RestoreSystemCursor();
+			return TRUE;
 		}
 		
 		case WM_SIZE:
@@ -1182,6 +1203,13 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 		case WM_ACTIVATEAPP:
 		{
+			if(!(BOOL)wParam) {
+				ReleaseCapture();
+				ClipCursor(nil);
+				_InputShutdownMouse();
+				RestoreSystemCursor();
+			}
+
 			switch ( gGameState )
 			{
 				case GS_LOGO_MPEG:
@@ -1551,11 +1579,8 @@ psSelectDevice()
 			}
 		}
 
-		if(bestFsMode < 0){
-			MessageBox(nil, "Cannot find desired video mode", "GTA: Vice City", MB_OK);
-			return FALSE;
-		}
-		GcurSelVM = bestFsMode;
+		// Borderless fullscreen does not need a matching exclusive mode.
+		GcurSelVM = bestFsMode >= 0 ? bestFsMode : bestWndMode;
 
 		FrontEndMenuManager.m_nDisplayVideoMode = GcurSelVM;
 		FrontEndMenuManager.m_nPrefsVideoMode = FrontEndMenuManager.m_nDisplayVideoMode;
@@ -1567,8 +1592,9 @@ psSelectDevice()
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
 #ifdef IMPROVED_VIDEOMODE
-	if (FrontEndMenuManager.m_nPrefsWindowed)
-		GcurSelVM = bestWndMode;
+	// Both modes use the windowed RenderWare device. Fullscreen is a
+	// monitor-sized borderless window, never an exclusive display mode.
+	GcurSelVM = bestWndMode;
 
 	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
@@ -1587,11 +1613,8 @@ psSelectDevice()
 		return FALSE;
 	}
 
-#ifdef IMPROVED_VIDEOMODE
-	if (!FrontEndMenuManager.m_nPrefsWindowed)
-#else
+#ifndef IMPROVED_VIDEOMODE
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
-#endif
 	{
 		debug("%dx%dx%d", vm.width, vm.height, vm.depth);
 		
@@ -1603,6 +1626,7 @@ psSelectDevice()
 			RwD3D8EngineSetRefreshRate((RwUInt32)refresh);
 		}
 	}
+#endif
 	
 #ifdef IMPROVED_VIDEOMODE
 	if (!FrontEndMenuManager.m_nPrefsWindowed)
@@ -1610,18 +1634,28 @@ psSelectDevice()
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
 #endif
 	{
-		RsGlobal.maximumWidth = vm.width;
-		RsGlobal.maximumHeight = vm.height;
-		RsGlobal.width = vm.width;
-		RsGlobal.height = vm.height;
-		
 		PSGLOBAL(fullScreen) = TRUE;
 
 #ifdef IMPROVED_VIDEOMODE
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_POPUP);
-		SetWindowPos(PSGLOBAL(window), nil, 0, 0, 0, 0,
-					SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|
-					SWP_FRAMECHANGED);
+		MONITORINFO monitorInfo;
+		monitorInfo.cbSize = sizeof(monitorInfo);
+		HMONITOR monitor = MonitorFromWindow(PSGLOBAL(window), MONITOR_DEFAULTTOPRIMARY);
+		GetMonitorInfo(monitor, &monitorInfo);
+		const int borderlessWidth = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
+		const int borderlessHeight = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+
+		RsGlobal.maximumWidth = borderlessWidth;
+		RsGlobal.maximumHeight = borderlessHeight;
+		RsGlobal.width = borderlessWidth;
+		RsGlobal.height = borderlessHeight;
+		FrontEndMenuManager.m_nPrefsWidth = borderlessWidth;
+		FrontEndMenuManager.m_nPrefsHeight = borderlessHeight;
+
+		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
+		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
+			monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
+			borderlessWidth, borderlessHeight,
+			SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 	}else{
 		RECT rect;
 		rect.left = rect.top = 0;
@@ -1646,6 +1680,11 @@ psSelectDevice()
 		RsGlobal.height = rect.bottom;
 		
 		PSGLOBAL(fullScreen) = FALSE;
+#else
+		RsGlobal.maximumWidth = vm.width;
+		RsGlobal.maximumHeight = vm.height;
+		RsGlobal.width = vm.width;
+		RsGlobal.height = vm.height;
 #endif
 	}
 #ifdef MULTISAMPLING
