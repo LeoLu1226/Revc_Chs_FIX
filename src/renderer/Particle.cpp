@@ -1128,6 +1128,24 @@ void CParticle::Update()
 		return;
 
 	CRGBA color(0, 0, 0, 0);
+
+#ifdef FIX_BUGS
+	// Most particle movement already uses the variable time step, but the
+	// original game also has many counters and emitters that advance once per
+	// rendered frame. Drive those at the original 30 Hz instead.
+	static double fParticleFrameAccumulator = 0.0;
+	static uint32 nParticleFrameCounter = 0;
+	const float fTimeStepFix = CTimer::GetTimeStepFix();
+	fParticleFrameAccumulator += fTimeStepFix;
+	const uint32 nParticleFramesPassed = (uint32)fParticleFrameAccumulator;
+	fParticleFrameAccumulator -= nParticleFramesPassed;
+	const uint32 nFirstParticleFrame = nParticleFrameCounter + 1;
+	nParticleFrameCounter += nParticleFramesPassed;
+#else
+	const float fTimeStepFix = 1.0f;
+	const uint32 nParticleFramesPassed = 1;
+	const uint32 nFirstParticleFrame = CTimer::GetFrameCounter();
+#endif
 	
 	float fFricDeccel50 = pow(0.50f, CTimer::GetTimeStep());
 	float fFricDeccel80 = pow(0.80f, CTimer::GetTimeStep());
@@ -1136,7 +1154,7 @@ void CParticle::Update()
 	float fFricDeccel96 = pow(0.96f, CTimer::GetTimeStep());
 	float fFricDeccel99 = pow(0.99f, CTimer::GetTimeStep());
 	
-	CParticleObject::UpdateAll();
+	CParticleObject::UpdateAll(nParticleFramesPassed);
 	
 	// ejaculation at 23:00, 23:15, 23:30, 23:45 
 	if ( CClock::ms_nGameClockHours == 23 &&
@@ -1145,16 +1163,17 @@ void CParticle::Update()
 			|| CClock::ms_nGameClockMinutes == 30
 			|| CClock::ms_nGameClockMinutes == 45 ) )
 	{
-		AddParticle(PARTICLE_CAR_SPLASH,
-					CVector(557.03f, -4.0f, 151.46f),
-					CVector(0.0f, 0.0f, 2.5f),
-					NULL,
-					2.0f,
-					CRGBA(255, 255, 255, 255),
-					0,
-					0,
-					1,
-					1000);
+		for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
+			AddParticle(PARTICLE_CAR_SPLASH,
+						CVector(557.03f, -4.0f, 151.46f),
+						CVector(0.0f, 0.0f, 2.5f),
+						NULL,
+						2.0f,
+						CRGBA(255, 255, 255, 255),
+						0,
+						0,
+						1,
+						1000);
 	}
 
 	for ( int32 i = 0; i < MAX_PARTICLES; i++ )
@@ -1228,13 +1247,19 @@ void CParticle::Update()
 #else
 				int32 nSinCosIndex = int32(DEGTORAD((float)particle->m_nRotation) * float(SIN_COS_TABLE_SIZE) / TWOPI) % SIN_COS_TABLE_SIZE;
 #endif
-				vecMoveStep.x = Sin(nSinCosIndex);
-				vecMoveStep.y = Sin(nSinCosIndex);
+				vecMoveStep.x = Sin(nSinCosIndex) * fTimeStepFix;
+				vecMoveStep.y = Sin(nSinCosIndex) * fTimeStepFix;
 				
 				if ( psystem->m_Type == PARTICLE_HEATHAZE_IN_DIST )
-					particle->m_nRotation = int16((float)particle->m_nRotation + 0.75f);
+				{
+					uint32 rotationSteps = nParticleFramesPassed;
+					for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
+						if ( ((nFirstParticleFrame + frame) & 3) == 0 )
+							--rotationSteps;
+					particle->m_nRotation = int16(particle->m_nRotation + rotationSteps);
+				}
 				else
-					particle->m_nRotation = int16((float)particle->m_nRotation + 1.0f);
+					particle->m_nRotation = int16(particle->m_nRotation + nParticleFramesPassed);
 			}
 			
 			if ( psystem->m_Type == PARTICLE_BEASTIE )
@@ -1262,14 +1287,17 @@ void CParticle::Update()
 			
 			if ( psystem->m_Type == PARTICLE_FIREBALL )
 			{
-				  AddParticle(PARTICLE_HEATHAZE, particle->m_vecPosition, CVector(0.0f, 0.0f, 0.0f),
-					nil, particle->m_fSize * 5.0f);
+				for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
+					AddParticle(PARTICLE_HEATHAZE, particle->m_vecPosition, CVector(0.0f, 0.0f, 0.0f),
+						nil, particle->m_fSize * 5.0f);
 			}
 			
 			if ( psystem->m_Type == PARTICLE_GUNSMOKE2 )
 			{
-				if ( CTimer::GetFrameCounter() & 10 )
+				for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
 				{
+					if ( !((nFirstParticleFrame + frame) & 10) )
+						continue;
 #ifdef FIX_BUGS
 					if ( FindPlayerPed() && FindPlayerPed()->GetWeapon()->m_eWeaponType == WEAPONTYPE_MINIGUN )
 #else
@@ -1327,11 +1355,14 @@ void CParticle::Update()
 					fDistToCam = (TheCamera.GetPosition() - vecPos).Magnitude();
 				}
 
-				if ( numWaterDropOnScreen < nMaxDrops && numWaterDropOnScreen < 63
-					&& fDistToCam < 10.0f
-					&& clearWaterDrop == false
-					&& !CGame::IsInInterior() )
+				for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
 				{
+					if ( numWaterDropOnScreen >= nMaxDrops || numWaterDropOnScreen >= 63
+						|| fDistToCam >= 10.0f
+						|| clearWaterDrop == true
+						|| CGame::IsInInterior() )
+						continue;
+
 					CVector vecWaterdropTarget
 					(
 						CGeneral::GetRandomNumberInRange(-0.25f, 0.25f),
@@ -1418,6 +1449,8 @@ void CParticle::Update()
 				if ( particle->m_fExpansionRate > 0.0f )
 				{
 					float speed = Max(vecWind.Magnitude(), vecMoveStep.Magnitude());
+					if ( fTimeStepFix > 0.0f )
+						speed /= fTimeStepFix;
 					
 					if ( psystem->m_Type == PARTICLE_EXHAUST_FUMES || psystem->m_Type == PARTICLE_ENGINE_STEAM )
 						speed *= 2.0f;
@@ -1425,14 +1458,14 @@ void CParticle::Update()
 					if ( ( psystem->m_Type == PARTICLE_BOAT_SPLASH || psystem->m_Type == PARTICLE_CAR_SPLASH )
 							&& particle->m_fSize > 1.2f )
 					{
-						size = particle->m_fSize - (1.0f + speed) * particle->m_fExpansionRate;
-						particle->m_vecVelocity.z -= 0.15f;
+						size = particle->m_fSize - (1.0f + speed) * particle->m_fExpansionRate * fTimeStepFix;
+						particle->m_vecVelocity.z -= 0.15f * fTimeStepFix;
 					}
 					else
-						size = particle->m_fSize + (1.0f + speed) * particle->m_fExpansionRate;
+						size = particle->m_fSize + (1.0f + speed) * particle->m_fExpansionRate * fTimeStepFix;
 				}
 				else
-					size = particle->m_fSize + particle->m_fExpansionRate;
+					size = particle->m_fSize + particle->m_fExpansionRate * fTimeStepFix;
 				
 				if ( psystem->m_Type == PARTICLE_WATERDROP )
 					size = (size - Abs(vecMoveStep.x) * 0.000150000007f) + (Abs(vecMoveStep.z) * 0.0500000007f); //TODO:
@@ -1705,13 +1738,13 @@ void CParticle::Update()
 
 			if ( particle->m_nFadeToBlackTimer != 0 )
 			{
-				particle->m_nColorIntensity = Clamp(particle->m_nColorIntensity - particle->m_nFadeToBlackTimer,
-														0, 255);
+				particle->m_nColorIntensity = Clamp(particle->m_nColorIntensity - particle->m_nFadeToBlackTimer * (int32)nParticleFramesPassed,
+												0, 255);
 			}
 
 			if ( particle->m_nFadeAlphaTimer != 0 )
 			{
-				particle->m_nAlpha = Clamp(particle->m_nAlpha - particle->m_nFadeAlphaTimer,
+				particle->m_nAlpha = Clamp(particle->m_nAlpha - particle->m_nFadeAlphaTimer * (int32)nParticleFramesPassed,
 														0, 255);
 				if ( particle->m_nAlpha == 0 )
 				{
@@ -1722,51 +1755,60 @@ void CParticle::Update()
 			
 			if ( psystem->m_nZRotationAngleChangeAmount != 0 )
 			{
-				if ( particle->m_nZRotationTimer >= psystem->m_nZRotationChangeTime )
+				for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
 				{
-					particle->m_nZRotationTimer = 0;
-					particle->m_nCurrentZRotation += psystem->m_nZRotationAngleChangeAmount;
+					if ( particle->m_nZRotationTimer >= psystem->m_nZRotationChangeTime )
+					{
+						particle->m_nZRotationTimer = 0;
+						particle->m_nCurrentZRotation += psystem->m_nZRotationAngleChangeAmount;
+					}
+					else
+						++particle->m_nZRotationTimer;
 				}
-				else
-					++particle->m_nZRotationTimer;
 			}
 			
 			if ( psystem->m_fZRadiusChangeAmount != 0.0f )
 			{
-				if ( particle->m_nZRadiusTimer >= psystem->m_nZRadiusChangeTime )
+				for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
 				{
-					particle->m_nZRadiusTimer = 0;
-					particle->m_fCurrentZRadius += psystem->m_fZRadiusChangeAmount;
+					if ( particle->m_nZRadiusTimer >= psystem->m_nZRadiusChangeTime )
+					{
+						particle->m_nZRadiusTimer = 0;
+						particle->m_fCurrentZRadius += psystem->m_fZRadiusChangeAmount;
+					}
+					else
+						++particle->m_nZRadiusTimer;
 				}
-				else
-					++particle->m_nZRadiusTimer;
 			}
 
 			if ( psystem->m_nAnimationSpeed != 0 )
 			{
-				if ( particle->m_nAnimationSpeedTimer > psystem->m_nAnimationSpeed )
+				for ( uint32 frame = 0; frame < nParticleFramesPassed; frame++ )
 				{
-					particle->m_nAnimationSpeedTimer = 0;
-					
-					if ( ++particle->m_nCurrentFrame > psystem->m_nFinalAnimationFrame )
+					if ( particle->m_nAnimationSpeedTimer > psystem->m_nAnimationSpeed )
 					{
-						if ( psystem->Flags & CYCLE_ANIM )
-							particle->m_nCurrentFrame = psystem->m_nStartAnimationFrame;
-						else
-							--particle->m_nCurrentFrame;
-					}	
+						particle->m_nAnimationSpeedTimer = 0;
+
+						if ( ++particle->m_nCurrentFrame > psystem->m_nFinalAnimationFrame )
+						{
+							if ( psystem->Flags & CYCLE_ANIM )
+								particle->m_nCurrentFrame = psystem->m_nStartAnimationFrame;
+							else
+								--particle->m_nCurrentFrame;
+						}
+					}
+					else
+						++particle->m_nAnimationSpeedTimer;
 				}
-				else
-					++particle->m_nAnimationSpeedTimer;
 			}
 			
 			if ( particle->m_nRotationStep != 0 )
 #ifdef FIX_BUGS
-				particle->m_nRotation = CGeneral::LimitAngle(particle->m_nRotation + particle->m_nRotationStep);
+				particle->m_nRotation = CGeneral::LimitAngle(particle->m_nRotation + particle->m_nRotationStep * (int32)nParticleFramesPassed);
 #else
 				particle->m_nRotation += particle->m_nRotationStep;
 #endif
-			
+
 			if ( particle->m_fCurrentZRadius != 0.0f )
 			{
 				int32 nSinCosIndex = particle->m_nCurrentZRotation % SIN_COS_TABLE_SIZE;
