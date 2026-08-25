@@ -82,8 +82,8 @@ public:
 
 	void RemoveObject(void);
 	
-	static void UpdateAll(void);
-	void UpdateClose(void);
+	static void UpdateAll(uint32 framesPassed);
+	void UpdateClose(uint32 framesPassed);
 	void UpdateFar(void);
 	
 	static bool SaveParticle(uint8 *buffer, uint32 *length);
