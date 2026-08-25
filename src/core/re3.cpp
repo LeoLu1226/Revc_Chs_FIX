@@ -48,6 +48,9 @@
 #include "Population.h"
 #include "IniFile.h"
 #include "Zones.h"
+#ifdef _WIN32
+#include "CHSFont.h"
+#endif
 
 #include "crossplatform.h"
 
@@ -189,10 +192,16 @@ CustomFrontendOptionsPopulate(void)
 	}
 
 	if(fd = CFileMgr::OpenFile("text/chinese.gxt")) {
-		if(fd2 = CFileMgr::OpenFile("models/chinese.txd")) {
-			FrontendOptionAddDynamic("FEL_CHS", 0, 0, MENUALIGN_CENTER, nil, nil, LangchaSelect, nil, nil);
+		bool chineseFontsAvailable = false;
+#ifdef _WIN32
+		chineseFontsAvailable = CHSFont::UsesDynamicRenderer();
+#endif
+		if(!chineseFontsAvailable && (fd2 = CFileMgr::OpenFile("models/chinese.txd"))) {
+			chineseFontsAvailable = true;
 			CFileMgr::CloseFile(fd2);
 		}
+		if(chineseFontsAvailable)
+			FrontendOptionAddDynamic("FEL_CHS", 0, 0, MENUALIGN_CENTER, nil, nil, LangchaSelect, nil, nil);
 		CFileMgr::CloseFile(fd);
 	}
 
