@@ -474,7 +474,7 @@ CParticleObject::RemoveObject(void)
 }
 
 void
-CParticleObject::UpdateAll(void)
+CParticleObject::UpdateAll(uint32 framesPassed)
 {
 	{
 		CParticleObject *pobj = pCloseListHead;
@@ -484,7 +484,7 @@ CParticleObject::UpdateAll(void)
 			do
 			{
 				nextpobj = pobj->m_pNext;
-				pobj->UpdateClose();
+				pobj->UpdateClose(framesPassed);
 				pobj = nextpobj;
 			}
 			while ( nextpobj != nil );
@@ -518,7 +518,7 @@ CParticleObject::UpdateAll(void)
 	}
 }
 
-void CParticleObject::UpdateClose(void)
+void CParticleObject::UpdateClose(uint32 framesPassed)
 {
 	if ( !CGame::playingIntro )
 	{
@@ -545,8 +545,11 @@ void CParticleObject::UpdateClose(void)
 		}
 	}
 	
-	if ( ++this->m_nFrameCounter >= this->m_nSkipFrames )
-    {
+	for ( uint32 frame = 0; frame < framesPassed; frame++ )
+	{
+		if ( ++this->m_nFrameCounter < this->m_nSkipFrames )
+			continue;
+
 		this->m_nFrameCounter = 0;
 		
 		int32 randVal;
